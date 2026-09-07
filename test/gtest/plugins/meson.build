@@ -21,7 +21,7 @@ if enabled_plugins.get('AZURE_BLOB')
     subdir('azure_blob')
 endif
 
-if enabled_plugins.get('GPUNETIO')
+if enabled_plugins.get('GPUNETIO') and cuda_dep.found()
     subdir('gpunetio')
 endif
 
