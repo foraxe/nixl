@@ -795,7 +795,7 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
     if (init_stream != nullptr) {
         cudaStreamDestroy(init_stream);
     }
-    if (cuda_device_switched && previous_cuda_device != gdevs[0].first) {
+    if (cuda_device_switched && previous_cuda_device != static_cast<int>(gdevs[0].first)) {
         cudaSetDevice(previous_cuda_device);
     }
     if (cuda_result != cudaSuccess) {
