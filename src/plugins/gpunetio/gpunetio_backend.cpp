@@ -467,16 +467,18 @@ nixlDocaEngine::getSupportedMems() const {
 
 nixlDocaEngine::~nixlDocaEngine() {
     doca_error_t result;
-    nixl::doca::cudaDeviceGuard cuda_device(gdevs[0].first);
-    if (cuda_device.status() != cudaSuccess) {
-        NIXL_ERROR << "Cannot select GPUNETIO engine device for teardown";
-        return;
-    }
 
     NIXL_DEBUG << "Before progressThreadStop ";
     progressThreadStop();
 
     *reinterpret_cast<volatile uint32_t *>(wait_exit_cpu) = 1;
+    nixl::doca::cudaDeviceGuard cuda_device(gdevs[0].first);
+    if (cuda_device.status() != cudaSuccess) {
+        NIXL_ERROR << "Cannot select GPUNETIO engine device; retaining device resources";
+        // Host progress is joined; do not destroy device-owned objects in another context.
+        retainedQp_.release();
+        return;
+    }
     NIXL_DEBUG << "Before cudaStreamSynchronize ";
     nixlDocaEngineCheckCudaError(cudaStreamSynchronize(wait_stream), "stream synchronize");
     nixlDocaEngineCheckCudaError(cudaStreamDestroy(wait_stream), "stream destroy");
