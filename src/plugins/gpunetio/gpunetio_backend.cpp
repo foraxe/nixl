@@ -1566,6 +1566,7 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
                     staged_req.lkey2[idx] = next_lmd->mr->get_lkey();
                     staged_req.size2[idx] = local[desc_offset].len;
                     staged_req.num_sge[idx] = 2;
+                    staged_req.has_two_sge = 1;
                     ++desc_offset;
                 }
             }
@@ -1575,7 +1576,9 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
         staged_req.last_posted = last_posted_flags;
         staged_req.qp_data = rdma_qp->qp_data->get_qp_gpu_dev();
         staged_req.qp_notif = rdma_qp->qp_notif->get_qp_gpu_dev();
-        memcpy(&xferReqRingCpu[pos], &staged_req, sizeof(staged_req));
+        const size_t publish_size =
+            staged_req.has_two_sge ? sizeof(staged_req) : offsetof(docaXferReqGpu, lbuf2);
+        memcpy(&xferReqRingCpu[pos], &staged_req, publish_size);
 
         if (desc_offset < lcnt && !reserve_position()) {
             abandon_request();

@@ -132,7 +132,7 @@ kernel_write(doca_gpu_dev_verbs_qp *qp, struct docaXferReqGpu *xferReqRing, uint
                xferReqRing[pos].lkey[idx],
                (uint64_t)xferReqRing[pos].size[idx]);
 #endif
-        if (xferReqRing[pos].num_sge[idx] == 2) {
+        if (xferReqRing[pos].has_two_sge && xferReqRing[pos].num_sge[idx] == 2) {
             doca_gpu_dev_verbs_wqe_prepare_write(qp,
                                                  wqe_ptr,
                                                  wqe_idx,
