@@ -98,73 +98,79 @@ runPeerTransfers(const char *nic) {
         checkCuda(cudaSetDevice(engine));
         check(agents[engine]->loadRemoteMD(metadata[1 - engine], peer[engine]));
     }
-    for (const uint32_t count : {2U, 513U, 1024U, 4096U}) {
-        const size_t rows = count - 1;
-        nixl_xfer_dlist_t local(VRAM_SEG), remote(VRAM_SEG);
-        for (size_t row = 0; row < rows; ++row) {
-            local.addDesc(
-                nixlBasicDesc(reinterpret_cast<uintptr_t>(buffers[0].data) + row * 64, 32, 1));
-            remote.addDesc(
-                nixlBasicDesc(reinterpret_cast<uintptr_t>(buffers[1].data) + row * 32, 32, 0));
-        }
-        local.addDesc(
-            nixlBasicDesc(reinterpret_cast<uintptr_t>(buffers[0].data) + rows * 64, 8, 1));
-        remote.addDesc(
-            nixlBasicDesc(reinterpret_cast<uintptr_t>(buffers[1].data) + rows * 32, 8, 0));
-        nixl_opt_args_t attached;
-        cudaStream_t stream = nullptr;
-        attached.customParam.assign(reinterpret_cast<const char *>(&stream), sizeof(stream));
-        nixlXferReqH *unsupported = nullptr;
-        EXPECT_EQ(
-            agents[0]->createXferReq(NIXL_WRITE, local, remote, peer[0], unsupported, &attached),
-            NIXL_ERR_NOT_SUPPORTED);
-        EXPECT_EQ(unsupported, nullptr);
-        for (const auto op : {NIXL_WRITE, NIXL_READ}) {
-            nixlXferReqH *request = nullptr;
-            check(agents[0]->createXferReq(op, local, remote, peer[0], request));
-            for (uint64_t epoch = 1; epoch <= 3; ++epoch) {
-                const int src = op == NIXL_WRITE ? 0 : 1;
-                const int dst = 1 - src;
-                const size_t src_stride = src == 0 ? 64 : 32;
-                const size_t dst_stride = dst == 0 ? 64 : 32;
-                std::vector<unsigned char> input(Buffer::size, 0xa5), expected(Buffer::size, 0xa5);
-                for (size_t row = 0; row < rows; ++row) {
-                    const uint64_t identity = (epoch << 32) | row;
-                    for (size_t byte = 0; byte < 32; ++byte) {
-                        const auto value =
-                            reinterpret_cast<const unsigned char *>(&identity)[byte % 8];
-                        input[row * src_stride + byte] = value;
-                        expected[row * dst_stride + byte] = value;
-                    }
-                }
-                std::memcpy(input.data() + rows * src_stride, &epoch, sizeof(epoch));
-                std::memcpy(expected.data() + rows * dst_stride, &epoch, sizeof(epoch));
-                checkCuda(cudaSetDevice(buffers[src].owner));
-                checkCuda(cudaMemcpy(
-                    buffers[src].data, input.data(), Buffer::size, cudaMemcpyHostToDevice));
-                checkCuda(cudaStreamSynchronize(nullptr));
-                checkCuda(cudaSetDevice(buffers[dst].owner));
-                checkCuda(cudaMemset(buffers[dst].data, 0xa5, Buffer::size));
-                checkCuda(cudaStreamSynchronize(nullptr));
-                checkCuda(cudaSetDevice(1)); // Posting must select engine0 and restore caller1.
-                auto status = agents[0]->postXferReq(request);
-                const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-                while (status == NIXL_IN_PROG && std::chrono::steady_clock::now() < deadline) {
-                    status = agents[0]->getXferStatus(request);
-                    std::this_thread::yield();
-                }
-                check(status);
-                int current;
-                checkCuda(cudaGetDevice(&current));
-                EXPECT_EQ(current, 1);
-                std::vector<unsigned char> actual(Buffer::size);
-                checkCuda(cudaSetDevice(buffers[dst].owner));
-                checkCuda(cudaMemcpy(
-                    actual.data(), buffers[dst].data, Buffer::size, cudaMemcpyDeviceToHost));
-                EXPECT_EQ(actual, expected)
-                    << "op=" << op << " descriptors=" << count << " epoch=" << epoch;
+    // Cross ring wrap while alternating paired and fragmented target layouts.
+    for (int layout = 0; layout < 2; ++layout) {
+        const size_t remote_stride = layout == 0 ? 32 : 64;
+        for (const uint32_t count : {2U, 513U, 1024U, 4096U}) {
+            const size_t rows = count - 1;
+            nixl_xfer_dlist_t local(VRAM_SEG), remote(VRAM_SEG);
+            for (size_t row = 0; row < rows; ++row) {
+                local.addDesc(
+                    nixlBasicDesc(reinterpret_cast<uintptr_t>(buffers[0].data) + row * 64, 32, 1));
+                remote.addDesc(nixlBasicDesc(
+                    reinterpret_cast<uintptr_t>(buffers[1].data) + row * remote_stride, 32, 0));
             }
-            check(agents[0]->releaseXferReq(request));
+            local.addDesc(
+                nixlBasicDesc(reinterpret_cast<uintptr_t>(buffers[0].data) + rows * 64, 8, 1));
+            remote.addDesc(nixlBasicDesc(
+                reinterpret_cast<uintptr_t>(buffers[1].data) + rows * remote_stride, 8, 0));
+            nixl_opt_args_t attached;
+            cudaStream_t stream = nullptr;
+            attached.customParam.assign(reinterpret_cast<const char *>(&stream), sizeof(stream));
+            nixlXferReqH *unsupported = nullptr;
+            EXPECT_EQ(agents[0]->createXferReq(
+                          NIXL_WRITE, local, remote, peer[0], unsupported, &attached),
+                      NIXL_ERR_NOT_SUPPORTED);
+            EXPECT_EQ(unsupported, nullptr);
+            for (const auto op : {NIXL_WRITE, NIXL_READ}) {
+                nixlXferReqH *request = nullptr;
+                check(agents[0]->createXferReq(op, local, remote, peer[0], request));
+                for (uint64_t epoch = 1; epoch <= 3; ++epoch) {
+                    const int src = op == NIXL_WRITE ? 0 : 1;
+                    const int dst = 1 - src;
+                    const size_t src_stride = src == 0 ? 64 : remote_stride;
+                    const size_t dst_stride = dst == 0 ? 64 : remote_stride;
+                    std::vector<unsigned char> input(Buffer::size, 0xa5),
+                        expected(Buffer::size, 0xa5);
+                    for (size_t row = 0; row < rows; ++row) {
+                        const uint64_t identity = (epoch << 32) | row;
+                        for (size_t byte = 0; byte < 32; ++byte) {
+                            const auto value =
+                                reinterpret_cast<const unsigned char *>(&identity)[byte % 8];
+                            input[row * src_stride + byte] = value;
+                            expected[row * dst_stride + byte] = value;
+                        }
+                    }
+                    std::memcpy(input.data() + rows * src_stride, &epoch, sizeof(epoch));
+                    std::memcpy(expected.data() + rows * dst_stride, &epoch, sizeof(epoch));
+                    checkCuda(cudaSetDevice(buffers[src].owner));
+                    checkCuda(cudaMemcpy(
+                        buffers[src].data, input.data(), Buffer::size, cudaMemcpyHostToDevice));
+                    checkCuda(cudaStreamSynchronize(nullptr));
+                    checkCuda(cudaSetDevice(buffers[dst].owner));
+                    checkCuda(cudaMemset(buffers[dst].data, 0xa5, Buffer::size));
+                    checkCuda(cudaStreamSynchronize(nullptr));
+                    checkCuda(cudaSetDevice(1)); // Posting must select engine0 and restore caller1.
+                    auto status = agents[0]->postXferReq(request);
+                    const auto deadline =
+                        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+                    while (status == NIXL_IN_PROG && std::chrono::steady_clock::now() < deadline) {
+                        status = agents[0]->getXferStatus(request);
+                        std::this_thread::yield();
+                    }
+                    check(status);
+                    int current;
+                    checkCuda(cudaGetDevice(&current));
+                    EXPECT_EQ(current, 1);
+                    std::vector<unsigned char> actual(Buffer::size);
+                    checkCuda(cudaSetDevice(buffers[dst].owner));
+                    checkCuda(cudaMemcpy(
+                        actual.data(), buffers[dst].data, Buffer::size, cudaMemcpyDeviceToHost));
+                    EXPECT_EQ(actual, expected)
+                        << "op=" << op << " descriptors=" << count << " epoch=" << epoch;
+                }
+                check(agents[0]->releaseXferReq(request));
+            }
         }
     }
     for (int engine = 0; engine < 2; ++engine) {

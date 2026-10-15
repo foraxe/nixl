@@ -81,7 +81,8 @@ by itself validate peer ownership or serving performance.
 
 The opt-in hardware regression uses two visible GPUs, with each engine's payload
 owned by the other GPU. It checks READ/WRITE, distinct local MR keys, 2/513/1024/4096
-descriptors, changing payloads/markers, reposting, untouched holes/tails and caller
+descriptors, contiguous/fragmented targets, ring wrap, changing payloads/markers,
+reposting, untouched holes/tails and caller
 device restoration. Validation copies results to the host after transfer completion;
 it does not establish a production receiver GPU acquire protocol or performance.
 Without `NIXL_TEST_RDMA_DEVICE`, the hardware test explicitly skips.
