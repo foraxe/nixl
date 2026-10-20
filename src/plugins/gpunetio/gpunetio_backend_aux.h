@@ -130,7 +130,6 @@ struct docaXferReqGpu {
     uint64_t data_ticket;
     uint64_t notif_wqe;
     uint64_t notif_ticket;
-    uint32_t generation;
     uint32_t state;
     uint32_t data_state;
     uint32_t notif_state;
@@ -192,7 +191,6 @@ struct docaQpProgress {
 };
 
 struct docaHostCompletion {
-    uint32_t generation;
     uint32_t state;
 };
 
@@ -210,7 +208,6 @@ struct docaProgressState {
     uint32_t active_bitmap;
     uint32_t progress_cursor;
     uint32_t failed;
-    uint32_t active_generation[DOCA_XFER_REQ_MAX];
 };
 
 struct nixlDocaNotif {

@@ -1762,7 +1762,6 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
     };
 
     treq->positions.reserve((lcnt + DOCA_XFER_REQ_SIZE - 1) / DOCA_XFER_REQ_SIZE);
-    treq->generations.reserve((lcnt + DOCA_XFER_REQ_SIZE - 1) / DOCA_XFER_REQ_SIZE);
     if (!reserve_position()) {
         abandon_request();
         return NIXL_ERR_BACKEND;
@@ -1772,7 +1771,6 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
     do {
         docaXferReqGpu staged_req{};
         staged_req.has_notif_msg_idx = DOCA_NOTIF_NULL;
-        staged_req.generation = ++xferReqGenerations_[pos];
         staged_req.state = DOCA_XFER_STATE_PREPARED;
         staged_req.data_state = DOCA_XFER_DATA_NONE;
         staged_req.notif_state = DOCA_XFER_NOTIF_NONE;
@@ -1857,8 +1855,6 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
         memcpy(&xferReqRingCpu[pos], &staged_req, publish_size);
         std::atomic_ref<uint32_t>(xferReqRingCpu[pos].state)
             .store(DOCA_XFER_STATE_PREPARED, std::memory_order_release);
-        treq->generations.push_back(staged_req.generation);
-        host_state_cpu_->completions[pos].generation = staged_req.generation;
         std::atomic_ref<uint32_t>(host_state_cpu_->completions[pos].state)
             .store(DOCA_XFER_STATE_PREPARED, std::memory_order_release);
 
@@ -1954,21 +1950,17 @@ nixlDocaEngine::postXfer(const nixl_xfer_op_t &operation,
             const uint32_t idx = treq->positions[i];
             auto &completion = host_state_cpu_->completions[idx];
             if (std::atomic_ref<uint32_t>(completion.state).load(std::memory_order_acquire) !=
-                    DOCA_XFER_STATE_COMPLETE ||
-                completion.generation != treq->generations[i]) {
+                DOCA_XFER_STATE_COMPLETE) {
                 treq->postStatus = NIXL_ERR_BACKEND;
                 return NIXL_ERR_BACKEND;
             }
 
             auto &request = xferReqRingCpu[idx];
             // Submission rewrites WQE/ticket fields before publishing their state.
-            request.generation = ++xferReqGenerations_[idx];
             request.data_state = DOCA_XFER_DATA_NONE;
             request.notif_state = DOCA_XFER_NOTIF_NONE;
-            treq->generations[i] = request.generation;
             std::atomic_ref<uint32_t>(completion.state)
                 .store(DOCA_XFER_STATE_PREPARED, std::memory_order_release);
-            completion.generation = request.generation;
             std::atomic_ref<uint32_t>(request.state)
                 .store(DOCA_XFER_STATE_PREPARED, std::memory_order_release);
         }
@@ -2003,7 +1995,6 @@ nixlDocaEngine::postXfer(const nixl_xfer_op_t &operation,
                 std::atomic_ref<uint32_t>(xferReqRingCpu[treq->positions[pending]].state)
                     .store(DOCA_XFER_STATE_ERROR, std::memory_order_release);
                 auto &completion = host_state_cpu_->completions[treq->positions[pending]];
-                completion.generation = treq->generations[pending];
                 std::atomic_ref<uint32_t>(completion.state)
                     .store(DOCA_XFER_STATE_ERROR, std::memory_order_release);
             }
@@ -2097,11 +2088,6 @@ nixlDocaEngine::checkXfer(nixlBackendReqH *handle) const {
         if (req_state != DOCA_XFER_STATE_COMPLETE && req_state != DOCA_XFER_STATE_ERROR) {
             return NIXL_IN_PROG;
         }
-        if (completion.generation != treq->generations[i]) {
-            markFailed();
-            treq->postStatus = NIXL_ERR_BACKEND;
-            return NIXL_IN_PROG;
-        }
         if (req_state == DOCA_XFER_STATE_ERROR) {
             request_error = true;
             continue;
@@ -2176,8 +2162,7 @@ nixlDocaEngine::releaseReqH(nixlBackendReqH *handle) const {
             auto &completion = host_state_cpu_->completions[treq->positions[i]];
             const auto state =
                 std::atomic_ref<uint32_t>(completion.state).load(std::memory_order_acquire);
-            if ((state != DOCA_XFER_STATE_PREPARED && state != DOCA_XFER_STATE_ERROR) ||
-                completion.generation != treq->generations[i]) {
+            if (state != DOCA_XFER_STATE_PREPARED && state != DOCA_XFER_STATE_ERROR) {
                 return NIXL_ERR_REPOST_ACTIVE;
             }
         }
@@ -2199,8 +2184,7 @@ nixlDocaEngine::releaseReqH(nixlBackendReqH *handle) const {
                 auto &completion = host_state_cpu_->completions[treq->positions[i]];
                 const auto terminal =
                     std::atomic_ref<uint32_t>(completion.state).load(std::memory_order_acquire);
-                if ((terminal != DOCA_XFER_STATE_COMPLETE && terminal != DOCA_XFER_STATE_ERROR) ||
-                    completion.generation != treq->generations[i]) {
+                if (terminal != DOCA_XFER_STATE_COMPLETE && terminal != DOCA_XFER_STATE_ERROR) {
                     return NIXL_ERR_REPOST_ACTIVE;
                 }
             }
@@ -2352,7 +2336,6 @@ nixlDocaEngine::genNotif(const std::string &remote_agent, const std::string &msg
                << " msg " << newMsg << " at " << buf_idx << " msg_buf " << msg_buf << "\n";
 
     docaXferReqGpu request{};
-    request.generation = ++xferReqGenerations_[pos];
     request.state = DOCA_XFER_STATE_NOTIF_PENDING;
     request.notif_state = DOCA_XFER_NOTIF_PENDING;
     request.has_notif_msg_idx = buf_idx;
@@ -2365,7 +2348,6 @@ nixlDocaEngine::genNotif(const std::string &remote_agent, const std::string &msg
     memcpy(&xferReqRingCpu[pos], &request, sizeof(request));
     std::atomic_ref<uint32_t>(xferReqRingCpu[pos].state)
         .store(DOCA_XFER_STATE_NOTIF_PENDING, std::memory_order_release);
-    host_state_cpu_->completions[pos].generation = request.generation;
     std::atomic_ref<uint32_t>(host_state_cpu_->completions[pos].state)
         .store(DOCA_XFER_STATE_PREPARED, std::memory_order_release);
     const doca_error_t result =
@@ -2377,7 +2359,6 @@ nixlDocaEngine::genNotif(const std::string &remote_agent, const std::string &msg
         markFailed();
         std::atomic_ref<uint32_t>(xferReqRingCpu[pos].state)
             .store(DOCA_XFER_STATE_ERROR, std::memory_order_release);
-        host_state_cpu_->completions[pos].generation = request.generation;
         std::atomic_ref<uint32_t>(host_state_cpu_->completions[pos].state)
             .store(DOCA_XFER_STATE_ERROR, std::memory_order_release);
         xferReqReserved_[pos].store(false, std::memory_order_release);
@@ -2388,11 +2369,6 @@ nixlDocaEngine::genNotif(const std::string &remote_agent, const std::string &msg
         auto &completion = host_state_cpu_->completions[pos];
         const uint32_t request_state =
             std::atomic_ref<uint32_t>(completion.state).load(std::memory_order_acquire);
-        if ((request_state == DOCA_XFER_STATE_COMPLETE || request_state == DOCA_XFER_STATE_ERROR) &&
-            completion.generation != request.generation) {
-            markFailed();
-            return NIXL_ERR_BACKEND;
-        }
         if (request_state == DOCA_XFER_STATE_COMPLETE) {
             xferReqReserved_[pos].store(false, std::memory_order_release);
             return NIXL_SUCCESS;
