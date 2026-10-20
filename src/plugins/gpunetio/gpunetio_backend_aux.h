@@ -128,14 +128,18 @@ struct docaXferReqGpu {
     uint32_t msg_sz;
     uint64_t last_wqe;
     uint64_t data_ticket;
+    uint64_t notif_wqe;
+    uint64_t notif_ticket;
     uint32_t state;
     uint32_t data_state;
+    uint32_t notif_state;
     uintptr_t lbuf_notif;
     uint32_t lkey_notif;
     nixl_xfer_op_t backendOp; /* Needed only in case of GPU device transfer */
     doca_gpu_dev_verbs_qp *qp_data;
     doca_gpu_dev_verbs_qp *qp_notif;
     struct docaQpProgress *qp_progress;
+    struct docaQpProgress *notif_progress;
     uint16_t wait_completion_count;
     uint16_t wait_completion_positions[DOCA_XFER_REQ_MAX];
     uint64_t *peer_write_completed;
@@ -158,6 +162,8 @@ enum docaXferState : uint32_t {
     DOCA_XFER_STATE_FREE,
     DOCA_XFER_STATE_PREPARED,
     DOCA_XFER_STATE_DATA_POSTED,
+    DOCA_XFER_STATE_NOTIF_PENDING,
+    DOCA_XFER_STATE_NOTIF_POSTED,
     DOCA_XFER_STATE_COMPLETE,
     DOCA_XFER_STATE_ERROR,
 };
@@ -168,10 +174,20 @@ enum docaXferDataState : uint32_t {
     DOCA_XFER_DATA_COMPLETE,
 };
 
+enum docaXferNotifState : uint32_t {
+    DOCA_XFER_NOTIF_NONE,
+    DOCA_XFER_NOTIF_PENDING,
+    DOCA_XFER_NOTIF_POSTED,
+    DOCA_XFER_NOTIF_COMPLETE,
+};
+
 struct docaQpProgress {
     uint32_t data_producer_lock;
+    uint32_t notif_producer_lock;
     uint64_t next_data_ticket;
     uint64_t head_data_ticket;
+    uint64_t next_notif_ticket;
+    uint64_t head_notif_ticket;
 };
 
 struct docaHostCompletion {
@@ -352,12 +368,16 @@ doca_kernel_read(cudaStream_t stream,
                  uint32_t pos,
                  bool wait_for_completion);
 doca_error_t
+doca_kernel_publish_notif(cudaStream_t stream,
+                          struct docaXferReqGpu *xfer_req_ring,
+                          struct docaProgressState *progress_state,
+                          uint32_t pos);
+doca_error_t
 doca_kernel_progress(cudaStream_t stream,
                      struct docaXferReqGpu *xfer_req_ring,
                      struct docaProgressState *progress_state,
                      struct docaNotif *notif_fill,
                      struct docaNotif *notif_progress,
-                     struct docaNotif *notif_send_gpu,
                      uint32_t *exit_flag);
 
 #endif /* GPUNETIO_BACKEND_AUX_H */
