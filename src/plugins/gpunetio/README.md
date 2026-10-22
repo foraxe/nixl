@@ -47,6 +47,13 @@ events while potentially reducing overlap between requests. Attached CUDA
 streams are supported for WRITE only with count 1. Single-QP mode preserves the
 legacy OOB format; multi-QP mode uses a versioned QPN exchange.
 
+For WRITE requests of at least 1 MiB whose descriptor-count chunks would leave
+some configured QPs unused, preparation splits ranges with a per-chunk byte
+budget. Addresses and memory keys stay with each range, and the final input
+descriptor starts in a separate chunk. Small requests, requests with enough
+descriptor chunks, READ and the default single-QP mode keep their existing
+mapping. This does not change completion or notification ordering.
+
 DOCA GPUNetIO backend takes these input parameters:
 - network_devices: network device to be used during the execution (e.g. mlx5_0). Current release supports only 1 network device.
 - oob_interface: network interface to be used when exchanging control info during initiator/target connection. Optional parameter, not needed if the network device is set in Ethernet mode.
