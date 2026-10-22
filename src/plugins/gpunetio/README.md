@@ -47,11 +47,12 @@ events while potentially reducing overlap between requests. Attached CUDA
 streams are supported for WRITE only with count 1. Single-QP mode preserves the
 legacy OOB format; multi-QP mode uses a versioned QPN exchange.
 
-With `write_byte_striping=1` (default: `0`), WRITE requests of at least 4 MiB
-whose descriptor-count chunks would leave
-some configured QPs unused, preparation splits ranges with a per-chunk byte
-budget. Addresses and memory keys stay with each range, and the final input
-descriptor starts in a separate chunk. Small requests, requests with enough
+With `write_byte_striping=1` (default: `0`), preparation splits ranges with a
+per-chunk byte budget when at least 4 MiB can be spread across QPs and the
+descriptor-count chunks would leave some configured QPs unused. Addresses and
+memory keys stay with each range. For multiple input descriptors, the final
+descriptor remains intact in a separate chunk and is excluded from that byte
+budget. Small requests, requests with enough
 descriptor chunks, READ and the default single-QP mode keep their existing
 mapping. This does not change completion or notification ordering.
 For a single large descriptor, only its final eight payload bytes remain in
@@ -60,6 +61,9 @@ posted. These bytes remain ordinary payload, not a new receiver-ready protocol.
 Splitting uses additional positions in the existing 32-position request ring,
 so fewer prepared handles may fit. The opt-in is local to the sender and does
 not change the QPN exchange or require enabling it on the receiver.
+Payload pieces on different QPs may arrive out of order: consume only after
+completion or notification. An application arrival marker should be a separate
+final descriptor with descriptor merging disabled, not embedded inside a range.
 
 DOCA GPUNetIO backend takes these input parameters:
 - network_devices: network device to be used during the execution (e.g. mlx5_0). Current release supports only 1 network device.
