@@ -1670,9 +1670,11 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
             write_bytes += local[idx].len;
         }
     }
-    const bool byte_striping = write_bytes >= 1024 * 1024;
+    const bool byte_striping = write_bytes >= 4 * 1024 * 1024;
+    const size_t ordering_tail = byte_striping && lcnt == 1 ? sizeof(uint64_t) : 0;
+    const size_t bulk_bytes = write_bytes - ordering_tail;
     const size_t chunk_bytes_limit = byte_striping ?
-        write_bytes / dataQpCount_ + (write_bytes % dataQpCount_ != 0) :
+        bulk_bytes / dataQpCount_ + (bulk_bytes % dataQpCount_ != 0) :
         std::numeric_limits<size_t>::max();
 
     if (operation == NIXL_WRITE && dataQpCount_ > 1 && opt_args != nullptr &&
@@ -1784,8 +1786,12 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
             if (chunk_desc_count >= DOCA_XFER_REQ_SIZE && !mergeable) {
                 break;
             }
+            const size_t remaining = local[desc_idx].len - desc_bytes_consumed;
+            // A single range keeps only its last word behind the existing final-chunk barrier.
+            const size_t bulk_remaining =
+                ordering_tail && remaining > ordering_tail ? remaining - ordering_tail : remaining;
             const size_t piece_bytes = byte_striping ?
-                std::min({local[desc_idx].len - desc_bytes_consumed,
+                std::min({bulk_remaining,
                           chunk_bytes_limit - chunk_bytes,
                           size_t(DOCA_GPUNETIO_VERBS_MAX_TRANSFER_SIZE)}) :
                 local[desc_idx].len;
