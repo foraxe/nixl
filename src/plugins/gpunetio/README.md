@@ -47,7 +47,8 @@ events while potentially reducing overlap between requests. Attached CUDA
 streams are supported for WRITE only with count 1. Single-QP mode preserves the
 legacy OOB format; multi-QP mode uses a versioned QPN exchange.
 
-For WRITE requests of at least 4 MiB whose descriptor-count chunks would leave
+With `write_byte_striping=1` (default: `0`), WRITE requests of at least 4 MiB
+whose descriptor-count chunks would leave
 some configured QPs unused, preparation splits ranges with a per-chunk byte
 budget. Addresses and memory keys stay with each range, and the final input
 descriptor starts in a separate chunk. Small requests, requests with enough
@@ -56,6 +57,9 @@ mapping. This does not change completion or notification ordering.
 For a single large descriptor, only its final eight payload bytes remain in
 the final chunk, so the bulk can use all configured QPs before that chunk is
 posted. These bytes remain ordinary payload, not a new receiver-ready protocol.
+Splitting uses additional positions in the existing 32-position request ring,
+so fewer prepared handles may fit. The opt-in is local to the sender and does
+not change the QPN exchange or require enabling it on the receiver.
 
 DOCA GPUNetIO backend takes these input parameters:
 - network_devices: network device to be used during the execution (e.g. mlx5_0). Current release supports only 1 network device.
@@ -63,6 +67,7 @@ DOCA GPUNetIO backend takes these input parameters:
 - oob_port: TCP port used to listen for OOB connection setup. It must be an integer in the inclusive range [1, 65535] and defaults to 6544. Set a distinct port for each GPUNETIO backend sharing a host network namespace.
 - gid_index: RoCE GID table index, in [0, 255]. Defaults to 0; select the GID for the test fabric when a non-default index is required.
 - gpu_devices: GPU CUDA ID to be used during the execution (e.g. 0). Current release supports only 1 GPU device.
+- write_byte_striping: enable byte-balanced large WRITE preparation with `1`; disabled by default (`0`). NIXLBench exposes this as `--gpunetio_write_byte_striping=true`.
 - cuda_streams: how many CUDA streams the backend should created at setup time in the internal pool. Relevant only if the application wants to use the "stream pool" mode. If this parameter is not specified, default value is `DOCA_POST_STREAM_NUM`.
 
 ## Example

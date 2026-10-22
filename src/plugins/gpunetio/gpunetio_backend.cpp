@@ -317,6 +317,13 @@ nixlDocaEngine::nixlDocaEngine(const nixlBackendInitParams *init_params)
 
     local_port = parseGpunetioOobPort((*custom_params)["oob_port"]);
     dataQpCount_ = parseDataQpCount((*custom_params)["data_qp_count"]);
+    uint32_t byte_striping = 0;
+    const auto byte_option = custom_params->find("write_byte_striping");
+    if (byte_option != custom_params->end() && !byte_option->second.empty() &&
+        (!parseUnsigned(byte_option->second, byte_striping) || byte_striping > 1)) {
+        throw std::invalid_argument("write_byte_striping must be 0 or 1");
+    }
+    writeByteStriping_ = byte_striping != 0;
     if (dataQpCount_ > 1 &&
         (nstreams < static_cast<int>(dataQpCount_) ||
          nstreams > static_cast<int>(DOCA_POST_STREAM_NUM))) {
@@ -1659,7 +1666,7 @@ nixlDocaEngine::prepXfer(const nixl_xfer_op_t &operation,
     }
 
     size_t write_bytes = 0;
-    if (operation == NIXL_WRITE && dataQpCount_ > 1 &&
+    if (operation == NIXL_WRITE && writeByteStriping_ && dataQpCount_ > 1 &&
         (lcnt + DOCA_XFER_REQ_SIZE - 1) / DOCA_XFER_REQ_SIZE < dataQpCount_) {
         for (uint32_t idx = 0; idx < lcnt; ++idx) {
             if (local[idx].len > std::numeric_limits<size_t>::max() - write_bytes ||
