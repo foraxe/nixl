@@ -278,9 +278,16 @@ putDeferredWarp(const memViewElem &src,
     const uint64_t token = __shfl_sync(mask, static_cast<unsigned long long>(owner_token), 0);
     const auto status_base = reinterpret_cast<unsigned long long>(statuses);
     const auto common_status_base = __shfl_sync(mask, status_base, 0);
+    // CUDA 13.0 can miscompile isspacep intrinsics after merging typed pointers
+    // from different address spaces. Query the generic address directly.
+    uint32_t owner_visible;
+    asm("{ .reg .pred g, s; isspacep.global g, %1; isspacep.shared s, %1; "
+        "or.pred g, g, s; selp.u32 %0, 1, 0, g; }"
+        : "=r"(owner_visible)
+        : "l"(status_base));
     int error = NIXL_SUCCESS;
     if (owner_token == 0 || owner_token != token || statuses == nullptr ||
-        status_base != common_status_base || (!__isGlobal(statuses) && !__isShared(statuses))) {
+        status_base != common_status_base || !owner_visible) {
         error = NIXL_ERR_INVALID_PARAM;
     }
     const nixlDeviceMemViewWrapper *s = nullptr, *d = nullptr;

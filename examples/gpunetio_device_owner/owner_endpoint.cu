@@ -292,6 +292,44 @@ staleToken(nixlMemViewH local, nixlMemViewH remote, uint64_t old_token, Gate *ga
 }
 
 __global__ void
+wrongGridWarp(nixlMemViewH local, nixlMemViewH remote, uint64_t token, Gate *gate) {
+    __shared__ __align__(16) unsigned char bytes[32 * sizeof(nixlGpuXferStatusH)];
+    __shared__ uint32_t entered;
+    for (uint32_t i = threadIdx.x; i < sizeof(bytes); i += 32) {
+        bytes[i] = 0;
+    }
+    if (threadIdx.x == 0) {
+        cuda::atomic_ref<uint32_t, cuda::thread_scope_device> flag(gate->entered);
+        const uint64_t deadline = clock64() + kTimeoutCycles;
+        while (!flag.load(cuda::memory_order_acquire) && clock64() < deadline) {
+            __nanosleep(64);
+        }
+        entered = flag.load(cuda::memory_order_acquire);
+    }
+    __syncwarp();
+    if (!entered) {
+        if (threadIdx.x == 0) {
+            gate->status = NIXL_ERR_BACKEND;
+            cuda::atomic_ref<uint32_t, cuda::thread_scope_device>(gate->tested)
+                .store(1, cuda::memory_order_release);
+        }
+        return;
+    }
+    auto *statuses = reinterpret_cast<nixlGpuXferStatusH *>(bytes);
+    const auto rc = nixlPutDeferredWarp({local, 0, 0}, {remote, 0, 0}, 8, token, statuses, true);
+    bool clear = true;
+    for (uint32_t i = threadIdx.x; i < sizeof(bytes); i += 32) {
+        clear &= bytes[i] == 0;
+    }
+    const bool rejected = __all_sync(0xffffffffU, rc == NIXL_ERR_NOT_ALLOWED && clear);
+    if (threadIdx.x == 0) {
+        gate->status = rejected ? NIXL_ERR_NOT_ALLOWED : NIXL_ERR_BACKEND;
+        cuda::atomic_ref<uint32_t, cuda::thread_scope_device>(gate->tested)
+            .store(1, cuda::memory_order_release);
+    }
+}
+
+__global__ void
 revokedRkeyPut(nixlMemViewH local, nixlMemViewH remote, uint64_t token, FaultResult *out) {
     if (blockIdx.x || threadIdx.x) {
         return;
@@ -325,6 +363,55 @@ revokedRkeyPut(nixlMemViewH local, nixlMemViewH remote, uint64_t token, FaultRes
     out->later_post = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
         {local, 0, kGuard}, {remote, 0, kGuard}, sizeof(uint64_t), token, &rejected);
     out->release = nixlGpuReleaseOwner({local, 0, kGuard}, token);
+}
+
+__global__ void
+revokedRkeyWarpPut(nixlMemViewH local, nixlMemViewH remote, uint64_t token, FaultResult *out) {
+    __shared__ __align__(16) unsigned char bytes[64 * sizeof(nixlGpuXferStatusH)];
+    auto *a = reinterpret_cast<nixlGpuXferStatusH *>(bytes);
+    auto *b = a + 32;
+    for (uint32_t i = threadIdx.x; i < sizeof(bytes); i += 32) {
+        bytes[i] = 0;
+    }
+    if (threadIdx.x == 0) {
+        out->accepted = out->commit = NIXL_ERR_BACKEND;
+        out->completion = out->later_post = out->release = NIXL_IN_PROG;
+    }
+    __syncwarp();
+    const uint64_t offset = kGuard + uint64_t(threadIdx.x) * kStride;
+    auto rc = nixlPutDeferredWarp({local, 0, offset}, {remote, 0, offset}, 8, token, a, true);
+    const bool accepted = __all_sync(0xffffffffU, rc == NIXL_IN_PROG);
+    if (threadIdx.x == 0) {
+        out->accepted = accepted ? NIXL_IN_PROG : NIXL_ERR_UNKNOWN;
+    }
+    if (!accepted) {
+        return;
+    }
+    int completion = NIXL_IN_PROG;
+    if (threadIdx.x == 0) {
+        out->commit = nixlGpuCommit({local, 0, 0}, token);
+        if (out->commit == NIXL_SUCCESS) {
+            const uint64_t start = clock64();
+            do {
+                completion = nixlGpuOwnerGetXferStatus(a[0], token);
+            } while (completion == NIXL_IN_PROG && clock64() - start < kTimeoutCycles);
+        }
+        out->completion = completion;
+    }
+    completion = __shfl_sync(0xffffffffU, completion, 0);
+    if (completion != NIXL_ERR_BACKEND) {
+        return;
+    }
+    rc = nixlPutDeferredWarp({local, 0, offset}, {remote, 0, offset}, 8, token, b, true);
+    bool clear = true;
+    for (uint32_t i = 0; i < sizeof(*b); ++i) {
+        clear &= b[threadIdx.x].storage[i] == 0;
+    }
+    const bool rejected = __all_sync(0xffffffffU, rc == NIXL_ERR_BACKEND && clear);
+    if (threadIdx.x == 0) {
+        out->later_post = rejected ? NIXL_ERR_BACKEND : NIXL_ERR_UNKNOWN;
+        out->release = nixlGpuReleaseOwner({local, 0, 0}, token);
+    }
 }
 
 __global__ void
@@ -662,8 +749,13 @@ main(int argc, char **argv) {
                 const auto tag = run + "." + profile() + ".fault";
                 publish(dir / (tag + ".prepared"), "sender views and connection ready");
                 wait(dir / (tag + ".revoked"), dir / (run + "." + profile() + ".receiver.failed"));
-                revokedRkeyPut<<<1, 1, 0, stream.s>>>(
-                    local, remote, 1, static_cast<FaultResult *>(result.p));
+                if (prep_mode == 2) {
+                    revokedRkeyWarpPut<<<1, 32, 0, stream.s>>>(
+                        local, remote, 1, static_cast<FaultResult *>(result.p));
+                } else {
+                    revokedRkeyPut<<<1, 1, 0, stream.s>>>(
+                        local, remote, 1, static_cast<FaultResult *>(result.p));
+                }
                 cudaOk(cudaGetLastError(), "launch revoked-rkey owner PUT");
                 if (cudaStreamSynchronize(stream.s) != cudaSuccess) {
                     publish(dir / (tag + ".failed"), "fault owner stream synchronization failed");
@@ -731,8 +823,13 @@ main(int argc, char **argv) {
                                                     check_precommit,
                                                     prep_mode);
                 if (b == 0) {
-                    wrongGrid<<<1, 1, 0, probe.s>>>(
-                        local, remote, epoch, static_cast<Gate *>(gate.p));
+                    if (prep_mode == 2) {
+                        wrongGridWarp<<<1, 32, 0, probe.s>>>(
+                            local, remote, epoch, static_cast<Gate *>(gate.p));
+                    } else {
+                        wrongGrid<<<1, 1, 0, probe.s>>>(
+                            local, remote, epoch, static_cast<Gate *>(gate.p));
+                    }
                 }
                 cudaOk(cudaGetLastError(), "launch owner batch");
                 if (cudaStreamSynchronize(stream.s) != cudaSuccess) {

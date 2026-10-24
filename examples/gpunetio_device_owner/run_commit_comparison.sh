@@ -16,6 +16,8 @@ test -x "$exe"
 : "${OWNER_REPRO_OOB_INTERFACE:?set the OOB interface}"
 : "${OWNER_REPRO_GID_INDEX:?set the fabric GID index}"
 export OWNER_REPRO_PRECOMMIT_CHECK=0
+unset OWNER_REPRO_PREP_MODE
+unset OWNER_REPRO_WARP_QUALIFY
 source_prefix=(); receiver_prefix=()
 if [[ -n ${OWNER_REPRO_SOURCE_CPU:-} ]]; then source_prefix=(taskset -c "$OWNER_REPRO_SOURCE_CPU"); fi
 if [[ -n ${OWNER_REPRO_RECEIVER_CPU:-} ]]; then receiver_prefix=(taskset -c "$OWNER_REPRO_RECEIVER_CPU"); fi
