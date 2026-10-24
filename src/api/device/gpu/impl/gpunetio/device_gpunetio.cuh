@@ -353,6 +353,135 @@ putDeferred(const memViewElem &src,
 #endif
 }
 
+#if NIXL_GPUNETIO_DEVICE_API_HAS_SDK_PROFILE && defined(NIXL_GPUNETIO_DEVICE_API_PUBLIC)
+// Called collectively by warp0 through the public dispatcher. Status tags,
+// participation and storage are checked there; backend ranges are checked here.
+__device__ inline nixl_status_t
+putDeferredWarp(const memViewElem &src,
+                const memViewElem &dst,
+                size_t bytes,
+                uint64_t owner_token,
+                xferStatusH *statuses,
+                bool active) {
+    constexpr uint32_t mask = 0xffffffffU;
+    const uint32_t lane_id = threadIdx.x;
+    const uint32_t members = __ballot_sync(mask, active);
+    const uint32_t count = __popc(members);
+    if (count == 0) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    GpunetioDeviceLane *lane = nullptr;
+    uint64_t local_address = 0, remote_address = 0;
+    uint32_t lkey = 0, rkey = 0;
+    int error = NIXL_SUCCESS;
+    if (active) {
+        const auto *s = static_cast<const GpunetioDeviceView *>(src.mvh);
+        const auto *d = static_cast<const GpunetioDeviceView *>(dst.mvh);
+        if (bytes == 0 || bytes > DOCA_GPUNETIO_VERBS_MAX_TRANSFER_SIZE || s == nullptr ||
+            d == nullptr || s->abi_version != gpunetio_device_view_abi_version ||
+            d->abi_version != gpunetio_device_view_abi_version ||
+            s->role != gpunetio_device_view_role_local ||
+            d->role != gpunetio_device_view_role_remote || s->context == nullptr ||
+            s->context != d->context || s->context_cookie == 0 ||
+            s->context_cookie != d->context_cookie || s->execution_gpu != d->execution_gpu ||
+            s->context->lane == nullptr || s->elems == nullptr || d->elems == nullptr ||
+            src.index >= s->count || dst.index >= d->count) {
+            error = NIXL_ERR_INVALID_PARAM;
+        } else {
+            const auto &a = s->elems[src.index];
+            const auto &b = d->elems[dst.index];
+            if (a.valid == 0 || b.valid == 0 || a.peer_slot != gpunetio_local_peer_slot ||
+                b.peer_slot != gpunetio_remote_peer_slot ||
+                !rangeIsValid(a.base, a.length, src.offset, bytes, &local_address) ||
+                !rangeIsValid(b.base, b.length, dst.offset, bytes, &remote_address)) {
+                error = NIXL_ERR_INVALID_PARAM;
+            } else {
+                lane = s->context->lane;
+                lkey = a.key;
+                rkey = b.key;
+            }
+        }
+    }
+    const int leader = __ffs(members) - 1;
+    auto *common = reinterpret_cast<GpunetioDeviceLane *>(
+        __shfl_sync(mask, reinterpret_cast<unsigned long long>(lane), leader));
+    if (active && lane != common) {
+        error = NIXL_ERR_INVALID_PARAM;
+    }
+    const uint32_t invalid = __ballot_sync(mask, error != NIXL_SUCCESS);
+    if (invalid) {
+        return static_cast<nixl_status_t>(__shfl_sync(mask, error, __ffs(invalid) - 1));
+    }
+    uint64_t first = 0, generation = 0;
+    if (lane_id == 0) {
+        if (common->owner_enabled == 0 || common->qp == nullptr ||
+            !claimOwnerToken(common, owner_token)) {
+            error = NIXL_ERR_NOT_ALLOWED;
+        } else if (common->failed != 0) {
+            error = NIXL_ERR_BACKEND;
+        } else {
+            auto *qp = common->qp;
+            auto *cq = doca_gpu_dev_verbs_qp_get_cq_sq(qp);
+            if (common->owner_wqe_pending > qp->sq_wqe_num ||
+                count > qp->sq_wqe_num - common->owner_wqe_pending ||
+                common->owner_cqe_pending > cq->cqe_num ||
+                count > cq->cqe_num - common->owner_cqe_pending || common->owner_wqe_pending > 32 ||
+                count > 32 - common->owner_wqe_pending ||
+                common->owner_generation > ~uint64_t{0} - count) {
+                error = NIXL_ERR_NOT_ALLOWED;
+            } else {
+                generation = common->owner_generation;
+                first = doca_gpu_dev_verbs_reserve_wq_slots<owner_resource_sharing_mode,
+                                                            DOCA_GPUNETIO_VERBS_QP_SQ,
+                                                            DOCA_GPUNETIO_VERBS_CQ_64B>(
+                    qp, count, DOCA_GPUNETIO_VERBS_GPU_CODE_OPT_SKIP_AVAILABILITY_CHECK);
+            }
+        }
+    }
+    error = __shfl_sync(mask, error, 0);
+    if (error != NIXL_SUCCESS) {
+        return static_cast<nixl_status_t>(error);
+    }
+    first = __shfl_sync(mask, static_cast<unsigned long long>(first), 0);
+    generation = __shfl_sync(mask, static_cast<unsigned long long>(generation), 0);
+    if (active) {
+        const uint32_t rank = __popc(members & ((1U << lane_id) - 1U));
+        const uint64_t ticket = first + rank;
+        doca_gpu_dev_verbs_wqe_prepare_write(common->qp,
+                                             doca_gpu_dev_verbs_get_wqe_ptr(common->qp, ticket),
+                                             static_cast<uint16_t>(ticket),
+                                             DOCA_GPUNETIO_MLX5_OPCODE_RDMA_WRITE,
+                                             DOCA_GPUNETIO_MLX5_WQE_CTRL_CQ_UPDATE,
+                                             0,
+                                             remote_address,
+                                             rkey,
+                                             local_address,
+                                             lkey,
+                                             static_cast<uint32_t>(bytes));
+        auto *payload = statusPayload(&statuses[lane_id]);
+        payload->lane = common;
+        payload->generation = generation + rank + 1;
+        payload->ticket = ticket;
+        payload->owner_token = owner_token;
+        payload->cached_status = NIXL_IN_PROG;
+        payload->initialized = 1;
+    }
+    __syncwarp(mask);
+    if (lane_id == 0) {
+        if (common->owner_staged_count == 0) {
+            common->owner_staged_first = first;
+        }
+        common->owner_staged_last = first + count - 1;
+        common->owner_staged_count += count;
+        common->owner_wqe_pending += count;
+        common->owner_cqe_pending += count;
+        common->owner_generation = generation + count;
+    }
+    __syncwarp(mask);
+    return NIXL_IN_PROG;
+}
+#endif
+
 __device__ nixl_status_t
 commit(const memViewElem &owner_view, uint64_t owner_token) {
 #if !NIXL_GPUNETIO_DEVICE_API_HAS_SDK_PROFILE || !defined(NIXL_GPUNETIO_DEVICE_API_PUBLIC)

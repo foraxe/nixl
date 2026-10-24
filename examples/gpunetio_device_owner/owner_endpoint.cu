@@ -98,7 +98,10 @@ ownerBatch(nixlMemViewH local,
            Gate *gate,
            bool probe,
            bool batch_commit,
-           bool check_precommit) {
+           bool check_precommit,
+           int prep_mode) {
+    __shared__ __align__(16) unsigned char shared_bytes[32 * sizeof(nixlGpuXferStatusH)];
+    __shared__ int group_status;
     if (blockIdx.x || threadIdx.x >= 256) {
         return;
     }
@@ -107,91 +110,135 @@ ownerBatch(nixlMemViewH local,
         source[kGuard + i] =
             offset < kPayload ? byteFor(kSeed ^ (uint64_t(epoch) << 32) ^ item, offset) : kHole;
     }
+    for (uint32_t i = threadIdx.x; i < sizeof(shared_bytes); i += blockDim.x) {
+        shared_bytes[i] = 0;
+    }
     if (threadIdx.x == 0) {
         *reinterpret_cast<uint64_t *>(source + kMarker) = (uint64_t(epoch) << 32) | 0x4e49584cull;
     }
     __syncthreads();
-    if (threadIdx.x != 0) {
+    if (threadIdx.x >= 32) {
         return;
     }
-
-    out->elapsed_ns = 0;
-    out->precommit_checked = 0;
-    out->precommit_status = NIXL_SUCCESS;
-    out->status = NIXL_SUCCESS;
-    out->wrong_owner = NIXL_SUCCESS;
-    out->release = NIXL_IN_PROG;
-    out->capacity = NIXL_SUCCESS;
-    nixlGpuXferStatusH status[32]{};
-    const uint64_t begin = timerNs();
-    for (uint32_t base = 0; base < kWqes; base += window) {
-        for (uint32_t j = 0; j < window; ++j) {
-            auto rc = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
-                {local, 0, kGuard + uint64_t(base + j) * kStride},
-                {remote, 0, kGuard + uint64_t(base + j) * kStride},
-                kPayload,
-                token,
-                &status[j]);
-            if (rc != NIXL_IN_PROG) {
-                out->status = rc;
-                return;
-            }
-            if (!batch_commit) {
-                out->status = nixlGpuCommit({local, 0, 0}, token);
-                if (out->status != NIXL_SUCCESS) {
-                    return;
-                }
+    const uint32_t lane = threadIdx.x;
+    alignas(16) unsigned char local_bytes[32 * sizeof(nixlGpuXferStatusH)];
+    if (lane == 0) {
+        if (prep_mode == 0) {
+            for (uint32_t i = 0; i < sizeof(local_bytes); ++i) {
+                local_bytes[i] = 0;
             }
         }
-        if (batch_commit) {
-            if (check_precommit) {
-                for (uint32_t j = 0; j < window; ++j) {
-                    const auto rc =
-                        nixlGpuOwnerGetXferStatus<nixl_gpu_level_t::THREAD>(status[j], token);
-                    ++out->precommit_checked;
-                    if (rc != NIXL_IN_PROG) {
-                        out->precommit_status = rc;
-                        out->status = rc == NIXL_SUCCESS ? NIXL_ERR_BACKEND : rc;
-                        return;
+        out->elapsed_ns = 0;
+        out->precommit_checked = 0;
+        out->precommit_status = NIXL_SUCCESS;
+        out->status = NIXL_SUCCESS;
+        out->wrong_owner = NIXL_SUCCESS;
+        out->release = NIXL_IN_PROG;
+        out->capacity = NIXL_SUCCESS;
+    }
+    auto *status =
+        reinterpret_cast<nixlGpuXferStatusH *>(prep_mode == 0 ? local_bytes : shared_bytes);
+    __syncwarp();
+    const uint64_t begin = lane == 0 ? timerNs() : 0;
+    for (uint32_t base = 0; base < kWqes; base += window) {
+        if (prep_mode == 2) {
+            const auto rc =
+                nixlPutDeferredWarp({local, 0, kGuard + uint64_t(base + lane) * kStride},
+                                    {remote, 0, kGuard + uint64_t(base + lane) * kStride},
+                                    kPayload,
+                                    token,
+                                    status,
+                                    lane < window);
+            if (lane == 0) {
+                group_status = rc;
+            }
+        } else if (lane == 0) {
+            group_status = NIXL_IN_PROG;
+            for (uint32_t j = 0; j < window; ++j) {
+                auto rc = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
+                    {local, 0, kGuard + uint64_t(base + j) * kStride},
+                    {remote, 0, kGuard + uint64_t(base + j) * kStride},
+                    kPayload,
+                    token,
+                    &status[j]);
+                if (rc != NIXL_IN_PROG) {
+                    group_status = rc;
+                    break;
+                }
+                if (!batch_commit) {
+                    rc = nixlGpuCommit({local, 0, 0}, token);
+                    if (rc != NIXL_SUCCESS) {
+                        group_status = rc;
+                        break;
                     }
                 }
-                out->precommit_status = NIXL_IN_PROG;
-            }
-            out->status = nixlGpuCommit({local, 0, 0}, token);
-            if (out->status != NIXL_SUCCESS) {
-                return;
             }
         }
-        if (base == 0 && window == 32) {
-            nixlGpuXferStatusH rejected{};
-            out->capacity = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
-                {local, 0, kGuard}, {remote, 0, kGuard}, kPayload, token, &rejected);
-        }
-        if (base == 0 && probe) {
-            cuda::atomic_ref<uint32_t, cuda::thread_scope_device> entered(gate->entered);
-            cuda::atomic_ref<uint32_t, cuda::thread_scope_device> tested(gate->tested);
-            entered.store(1, cuda::memory_order_release);
-            const uint64_t deadline = clock64() + kTimeoutCycles;
-            while (!tested.load(cuda::memory_order_acquire) && clock64() < deadline) {
-                __nanosleep(64);
+        __syncwarp();
+        if (group_status != NIXL_IN_PROG) {
+            if (lane == 0) {
+                out->status = group_status;
             }
-            out->wrong_owner = gate->status;
-            if (!tested.load(cuda::memory_order_acquire)) {
-                out->status = NIXL_ERR_BACKEND;
-                return;
-            }
+            return;
         }
-        for (uint32_t j = 0; j < window; ++j) {
-            const uint64_t deadline = clock64() + kTimeoutCycles;
-            nixl_status_t rc;
-            do {
-                rc = nixlGpuOwnerGetXferStatus<nixl_gpu_level_t::THREAD>(status[j], token);
-            } while (rc == NIXL_IN_PROG && clock64() < deadline);
-            if (rc != NIXL_SUCCESS) {
-                out->status = rc == NIXL_IN_PROG ? NIXL_ERR_BACKEND : rc;
-                return;
+        if (lane == 0) {
+            if (batch_commit) {
+                if (check_precommit) {
+                    for (uint32_t j = 0; j < window; ++j) {
+                        const auto rc =
+                            nixlGpuOwnerGetXferStatus<nixl_gpu_level_t::THREAD>(status[j], token);
+                        ++out->precommit_checked;
+                        if (rc != NIXL_IN_PROG) {
+                            out->precommit_status = rc;
+                            out->status = rc == NIXL_SUCCESS ? NIXL_ERR_BACKEND : rc;
+                            break;
+                        }
+                    }
+                    if (out->status == NIXL_SUCCESS) {
+                        out->precommit_status = NIXL_IN_PROG;
+                    }
+                }
+                if (out->status == NIXL_SUCCESS) {
+                    out->status = nixlGpuCommit({local, 0, 0}, token);
+                }
             }
+            if (out->status == NIXL_SUCCESS && base == 0 && window == 32) {
+                nixlGpuXferStatusH rejected{};
+                out->capacity = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
+                    {local, 0, kGuard}, {remote, 0, kGuard}, kPayload, token, &rejected);
+            }
+            if (out->status == NIXL_SUCCESS && base == 0 && probe) {
+                cuda::atomic_ref<uint32_t, cuda::thread_scope_device> entered(gate->entered);
+                cuda::atomic_ref<uint32_t, cuda::thread_scope_device> tested(gate->tested);
+                entered.store(1, cuda::memory_order_release);
+                const uint64_t deadline = clock64() + kTimeoutCycles;
+                while (!tested.load(cuda::memory_order_acquire) && clock64() < deadline) {
+                    __nanosleep(64);
+                }
+                out->wrong_owner = gate->status;
+                if (!tested.load(cuda::memory_order_acquire)) {
+                    out->status = NIXL_ERR_BACKEND;
+                }
+            }
+            for (uint32_t j = 0; j < window && out->status == NIXL_SUCCESS; ++j) {
+                const uint64_t deadline = clock64() + kTimeoutCycles;
+                nixl_status_t rc;
+                do {
+                    rc = nixlGpuOwnerGetXferStatus<nixl_gpu_level_t::THREAD>(status[j], token);
+                } while (rc == NIXL_IN_PROG && clock64() < deadline);
+                if (rc != NIXL_SUCCESS) {
+                    out->status = rc == NIXL_IN_PROG ? NIXL_ERR_BACKEND : rc;
+                }
+            }
+            group_status = out->status;
         }
+        __syncwarp();
+        if (group_status != NIXL_SUCCESS) {
+            return;
+        }
+    }
+    if (lane != 0) {
+        return;
     }
     nixlGpuXferStatusH ready{};
     out->status = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
@@ -215,7 +262,6 @@ ownerBatch(nixlMemViewH local,
     out->release = nixlGpuReleaseOwner({local, 0, kMarker}, token);
     out->elapsed_ns = timerNs() - begin;
 }
-
 __global__ void
 wrongGrid(nixlMemViewH local, nixlMemViewH remote, uint64_t token, Gate *gate) {
     if (blockIdx.x || threadIdx.x) {
@@ -243,6 +289,44 @@ staleToken(nixlMemViewH local, nixlMemViewH remote, uint64_t old_token, Gate *ga
     nixlGpuXferStatusH status{};
     gate->status = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
         {local, 0, 0}, {remote, 0, 0}, 8, old_token, &status);
+}
+
+__global__ void
+wrongGridWarp(nixlMemViewH local, nixlMemViewH remote, uint64_t token, Gate *gate) {
+    __shared__ __align__(16) unsigned char bytes[32 * sizeof(nixlGpuXferStatusH)];
+    __shared__ uint32_t entered;
+    for (uint32_t i = threadIdx.x; i < sizeof(bytes); i += 32) {
+        bytes[i] = 0;
+    }
+    if (threadIdx.x == 0) {
+        cuda::atomic_ref<uint32_t, cuda::thread_scope_device> flag(gate->entered);
+        const uint64_t deadline = clock64() + kTimeoutCycles;
+        while (!flag.load(cuda::memory_order_acquire) && clock64() < deadline) {
+            __nanosleep(64);
+        }
+        entered = flag.load(cuda::memory_order_acquire);
+    }
+    __syncwarp();
+    if (!entered) {
+        if (threadIdx.x == 0) {
+            gate->status = NIXL_ERR_BACKEND;
+            cuda::atomic_ref<uint32_t, cuda::thread_scope_device>(gate->tested)
+                .store(1, cuda::memory_order_release);
+        }
+        return;
+    }
+    auto *statuses = reinterpret_cast<nixlGpuXferStatusH *>(bytes);
+    const auto rc = nixlPutDeferredWarp({local, 0, 0}, {remote, 0, 0}, 8, token, statuses, true);
+    bool clear = true;
+    for (uint32_t i = threadIdx.x; i < sizeof(bytes); i += 32) {
+        clear &= bytes[i] == 0;
+    }
+    const bool rejected = __all_sync(0xffffffffU, rc == NIXL_ERR_NOT_ALLOWED && clear);
+    if (threadIdx.x == 0) {
+        gate->status = rejected ? NIXL_ERR_NOT_ALLOWED : NIXL_ERR_BACKEND;
+        cuda::atomic_ref<uint32_t, cuda::thread_scope_device>(gate->tested)
+            .store(1, cuda::memory_order_release);
+    }
 }
 
 __global__ void
@@ -279,6 +363,55 @@ revokedRkeyPut(nixlMemViewH local, nixlMemViewH remote, uint64_t token, FaultRes
     out->later_post = nixlPutDeferred<nixl_gpu_level_t::THREAD>(
         {local, 0, kGuard}, {remote, 0, kGuard}, sizeof(uint64_t), token, &rejected);
     out->release = nixlGpuReleaseOwner({local, 0, kGuard}, token);
+}
+
+__global__ void
+revokedRkeyWarpPut(nixlMemViewH local, nixlMemViewH remote, uint64_t token, FaultResult *out) {
+    __shared__ __align__(16) unsigned char bytes[64 * sizeof(nixlGpuXferStatusH)];
+    auto *a = reinterpret_cast<nixlGpuXferStatusH *>(bytes);
+    auto *b = a + 32;
+    for (uint32_t i = threadIdx.x; i < sizeof(bytes); i += 32) {
+        bytes[i] = 0;
+    }
+    if (threadIdx.x == 0) {
+        out->accepted = out->commit = NIXL_ERR_BACKEND;
+        out->completion = out->later_post = out->release = NIXL_IN_PROG;
+    }
+    __syncwarp();
+    const uint64_t offset = kGuard + uint64_t(threadIdx.x) * kStride;
+    auto rc = nixlPutDeferredWarp({local, 0, offset}, {remote, 0, offset}, 8, token, a, true);
+    const bool accepted = __all_sync(0xffffffffU, rc == NIXL_IN_PROG);
+    if (threadIdx.x == 0) {
+        out->accepted = accepted ? NIXL_IN_PROG : NIXL_ERR_UNKNOWN;
+    }
+    if (!accepted) {
+        return;
+    }
+    int completion = NIXL_IN_PROG;
+    if (threadIdx.x == 0) {
+        out->commit = nixlGpuCommit({local, 0, 0}, token);
+        if (out->commit == NIXL_SUCCESS) {
+            const uint64_t start = clock64();
+            do {
+                completion = nixlGpuOwnerGetXferStatus(a[0], token);
+            } while (completion == NIXL_IN_PROG && clock64() - start < kTimeoutCycles);
+        }
+        out->completion = completion;
+    }
+    completion = __shfl_sync(0xffffffffU, completion, 0);
+    if (completion != NIXL_ERR_BACKEND) {
+        return;
+    }
+    rc = nixlPutDeferredWarp({local, 0, offset}, {remote, 0, offset}, 8, token, b, true);
+    bool clear = true;
+    for (uint32_t i = 0; i < sizeof(*b); ++i) {
+        clear &= b[threadIdx.x].storage[i] == 0;
+    }
+    const bool rejected = __all_sync(0xffffffffU, rc == NIXL_ERR_BACKEND && clear);
+    if (threadIdx.x == 0) {
+        out->later_post = rejected ? NIXL_ERR_BACKEND : NIXL_ERR_UNKNOWN;
+        out->release = nixlGpuReleaseOwner({local, 0, 0}, token);
+    }
 }
 
 __global__ void
@@ -531,6 +664,18 @@ main(int argc, char **argv) {
         return 2;
     }
     const bool check_precommit = !precommit_env || std::strcmp(precommit_env, "1") == 0;
+    const char *prep_env = std::getenv("OWNER_REPRO_PREP_MODE");
+    if (prep_env && std::strcmp(prep_env, "0") != 0 && std::strcmp(prep_env, "1") != 0 &&
+        std::strcmp(prep_env, "2") != 0) {
+        std::cerr << "OWNER_REPRO_PREP_MODE must be 0 (scalar/local), 1 (scalar/shared), or 2 "
+                     "(warp/shared)\n";
+        return 2;
+    }
+    const int prep_mode = prep_env ? std::atoi(prep_env) : 0;
+    if (!fault_mode && prep_mode == 2 && !batch_commit) {
+        std::cerr << "warp preparation requires OWNER_REPRO_BATCH_COMMIT=1\n";
+        return 2;
+    }
     const std::string run = argv[3];
     const std::filesystem::path dir = argv[2];
     const int gpu = std::stoi(argv[4]);
@@ -604,8 +749,13 @@ main(int argc, char **argv) {
                 const auto tag = run + "." + profile() + ".fault";
                 publish(dir / (tag + ".prepared"), "sender views and connection ready");
                 wait(dir / (tag + ".revoked"), dir / (run + "." + profile() + ".receiver.failed"));
-                revokedRkeyPut<<<1, 1, 0, stream.s>>>(
-                    local, remote, 1, static_cast<FaultResult *>(result.p));
+                if (prep_mode == 2) {
+                    revokedRkeyWarpPut<<<1, 32, 0, stream.s>>>(
+                        local, remote, 1, static_cast<FaultResult *>(result.p));
+                } else {
+                    revokedRkeyPut<<<1, 1, 0, stream.s>>>(
+                        local, remote, 1, static_cast<FaultResult *>(result.p));
+                }
                 cudaOk(cudaGetLastError(), "launch revoked-rkey owner PUT");
                 if (cudaStreamSynchronize(stream.s) != cudaSuccess) {
                     publish(dir / (tag + ".failed"), "fault owner stream synchronization failed");
@@ -649,7 +799,11 @@ main(int argc, char **argv) {
             }
             std::cout << "profile,role,batch,window,phase,gpu_elapsed_ns,wrong_grid_status,"
                          "capacity_status,stale_token_status,release_status,"
-                         "batch_commit,precommit_check,precommit_checked,expected_commits\n";
+                         "batch_commit,precommit_check,precommit_checked,expected_commits";
+            if (prep_env) {
+                std::cout << ",prep_mode";
+            }
+            std::cout << "\n";
             for (uint32_t b = 0; b < 3 * (kWarmup + kMeasured); ++b) {
                 const uint32_t rep = b % (kWarmup + kMeasured), epoch = b + 1,
                                window = kWindows[b / (kWarmup + kMeasured)];
@@ -666,10 +820,16 @@ main(int argc, char **argv) {
                                                     static_cast<Gate *>(gate.p),
                                                     b == 0,
                                                     batch_commit,
-                                                    check_precommit);
+                                                    check_precommit,
+                                                    prep_mode);
                 if (b == 0) {
-                    wrongGrid<<<1, 1, 0, probe.s>>>(
-                        local, remote, epoch, static_cast<Gate *>(gate.p));
+                    if (prep_mode == 2) {
+                        wrongGridWarp<<<1, 32, 0, probe.s>>>(
+                            local, remote, epoch, static_cast<Gate *>(gate.p));
+                    } else {
+                        wrongGrid<<<1, 1, 0, probe.s>>>(
+                            local, remote, epoch, static_cast<Gate *>(gate.p));
+                    }
                 }
                 cudaOk(cudaGetLastError(), "launch owner batch");
                 if (cudaStreamSynchronize(stream.s) != cudaSuccess) {
@@ -745,7 +905,11 @@ main(int argc, char **argv) {
                           << r.wrong_owner << "," << r.capacity << "," << stale_status << ","
                           << r.release << "," << batch_commit << "," << check_precommit << ","
                           << r.precommit_checked << ","
-                          << (batch_commit ? kWqes / window + 1 : kWqes + 1) << "\n";
+                          << (batch_commit ? kWqes / window + 1 : kWqes + 1);
+                if (prep_env) {
+                    std::cout << "," << prep_mode;
+                }
+                std::cout << "\n";
             }
         } else {
             const auto peer = run + "." + profile() + ".sender";

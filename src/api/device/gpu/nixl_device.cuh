@@ -61,6 +61,26 @@ putDeferred(const memViewElem &src,
     return impl::putDeferred<level>(src, dst, size, owner_token, xfer_status);
 }
 
+/**
+ * @brief Warp0 cooperatively stages one PUT per active lane under one owner.
+ *
+ * All 32 lanes of warp0 in CTA0 participate, using the same token and pointer
+ * to 32 statuses in shared/global memory. Active entries must use one engine;
+ * invalid groups are rejected before reservation or status publication.
+ * Inactive status entries are untouched. Lane0 may be inactive for payload but
+ * remains the owner for commit, polling and release. Initialize status tags to
+ * zero before first use; the owner polls active statuses after committing.
+ */
+__device__ inline nixl_status_t
+putDeferredWarp(const memViewElem &src,
+                const memViewElem &dst,
+                size_t size,
+                uint64_t owner_token,
+                xferStatusH *statuses,
+                bool active = true) {
+    return impl::putDeferredWarp(src, dst, size, owner_token, statuses, active);
+}
+
 /** @brief Commit all deferred PUTs staged by the owner token on this view. */
 __device__ inline nixl_status_t
 commit(const memViewElem &owner_view, uint64_t owner_token) {
@@ -130,6 +150,16 @@ nixlPutDeferred(const nixlMemViewElem &src,
 __device__ inline nixl_status_t
 nixlGpuCommit(const nixlMemViewElem &owner_view, uint64_t owner_token) {
     return nixl::gpu::commit(owner_view, owner_token);
+}
+
+__device__ inline nixl_status_t
+nixlPutDeferredWarp(const nixlMemViewElem &src,
+                    const nixlMemViewElem &dst,
+                    size_t size,
+                    uint64_t owner_token,
+                    nixlGpuXferStatusH *statuses,
+                    bool active = true) {
+    return nixl::gpu::putDeferredWarp(src, dst, size, owner_token, statuses, active);
 }
 
 __device__ inline nixl_status_t
