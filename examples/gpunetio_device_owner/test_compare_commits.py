@@ -59,7 +59,7 @@ class CommitComparisonTest(unittest.TestCase):
             for mutation in ("probes", "commit_count", "truncated_receiver"):
                 with self.subTest(mutation=mutation):
                     self.write_runs(root, mutation)
-                    with self.assertRaises(AssertionError):
+                    with self.assertRaises(ValueError):
                         analyze(root, pairs=1)
 
 

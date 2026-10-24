@@ -18,8 +18,13 @@ def percentile(values, p):
     )
 
 
+def require(condition, context):
+    if not condition:
+        raise ValueError(f"Invalid commit-comparison input: {context}")
+
+
 def read_run(root, stem, grouped):
-    assert (root / f"{stem}.exit").read_text().strip() == "SOURCE=0 TARGET=0", stem
+    require((root / f"{stem}.exit").read_text().strip() == "SOURCE=0 TARGET=0", stem)
     logs = {
         role: (root / f"{stem}.{role}.log").read_text().splitlines()
         for role in ("sender", "receiver")
@@ -34,21 +39,21 @@ def read_run(root, stem, grouped):
         for line in logs["receiver"]
         if line.startswith("exclusive,receiver,")
     ]
-    assert len(sender) == len(receiver) == 3600, (stem, len(sender), len(receiver))
+    require(len(sender) == len(receiver) == 3600, (stem, len(sender), len(receiver)))
     for b, (tx, rx) in enumerate(zip(sender, receiver)):
         window = (1, 8, 32)[b // 1200]
         phase = "warmup" if b % 1200 < 200 else "measure"
-        assert len(tx) == 14 and len(rx) == 8, stem
-        assert int(tx[2]) == int(rx[2]) == b, stem
-        assert int(tx[3]) == int(rx[3]) == window, stem
-        assert tx[4] == rx[4] == phase, stem
-        assert int(tx[5]) > 0 and int(tx[9]) == 0, stem
-        assert list(map(int, rx[5:])) == [0, 0, 0], stem
-        assert int(tx[6]) == (-6 if b == 0 else 0), stem
-        assert int(tx[7]) == (-6 if window == 32 else 0), stem
-        assert int(tx[8]) == (-6 if b < 2 else -999), stem
-        assert list(map(int, tx[10:13])) == [int(grouped), 0, 0], stem
-        assert int(tx[13]) == (64 // window + 1 if grouped else 65), stem
+        require(len(tx) == 14 and len(rx) == 8, stem)
+        require(int(tx[2]) == int(rx[2]) == b, stem)
+        require(int(tx[3]) == int(rx[3]) == window, stem)
+        require(tx[4] == rx[4] == phase, stem)
+        require(int(tx[5]) > 0 and int(tx[9]) == 0, stem)
+        require(list(map(int, rx[5:])) == [0, 0, 0], stem)
+        require(int(tx[6]) == (-6 if b == 0 else 0), stem)
+        require(int(tx[7]) == (-6 if window == 32 else 0), stem)
+        require(int(tx[8]) == (-6 if b < 2 else -999), stem)
+        require(list(map(int, tx[10:13])) == [int(grouped), 0, 0], stem)
+        require(int(tx[13]) == (64 // window + 1 if grouped else 65), stem)
     return {
         window: [
             int(row[5]) / 1000
