@@ -62,8 +62,27 @@ Each run uses 200 warmup and 1,000 measured GPU-time samples per window.
 Report all five pairs. Fixed-commit mode commits every PUT; set
 `OWNER_REPRO_BATCH_COMMIT=1` for a separate correctness qualification that
 stages multiple PUTs before one commit and verifies precommit IN_PROG status.
+`OWNER_REPRO_PRECOMMIT_CHECK` defaults to `1`; leave it enabled for that
+qualification. For a matched performance comparison, set it to `0` in both
+fixed and grouped arms, so only commit grouping changes. Real postcommit CQ,
+payload, guard and lease-release checks remain enabled.
 The window-32 timing includes an intentionally rejected 33rd admission probe;
 window 8 is the clean bounded-window performance comparison.
+
+Run five alternating EXCLUSIVE-profile pairs with the same executable and
+runtime configuration:
+
+```bash
+examples/gpunetio_device_owner/run_commit_comparison.sh build /path/to/new-results
+```
+
+The runner requires the fabric environment and matching core/plugin library
+paths above. It validates both endpoint exit codes and invokes
+`compare_commits.py`, which rejects mixed qualification/performance modes,
+incomplete runs and unexpected status/count fields before producing per-window
+paired p50/p99. There are 65 accepted WQEs per batch in either arm. At window
+8, expected API commits are 65 versus 9, including the final marker; the CSV
+reports this expectation rather than claiming measured MMIO transactions.
 
 For an isolated stale-rkey CQE test, use `fault-receiver` and `fault-sender`
 with a fresh coordination directory and run ID. These roles revoke only their
