@@ -161,6 +161,7 @@ public:
 
 private:
     bool nativeMode_ = false;
+    bool nativeOwnerMode_ = false;
     mutable std::unique_ptr<nixlGpunetioNativeState> nativeState_;
     void
     initializeNativeState();

@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <doca_gpunetio_dev_verbs_cq.cuh>
 #include <doca_gpunetio_dev_verbs_onesided.cuh>
+#include <doca_gpunetio_dev_verbs_qp.cuh>
 #else
 #define NIXL_GPUNETIO_DEVICE_API_HAS_SDK_PROFILE 0
 #endif
@@ -80,6 +81,24 @@ put(doca_gpu_dev_verbs_qp *qp,
         bytes,
         &ticket);
     *ticket_bits = ticketToBits(ticket);
+}
+
+template<enum doca_gpu_dev_verbs_resource_sharing_mode sharing_mode>
+__device__ inline void
+markReadyAndSubmitOwner(doca_gpu_dev_verbs_qp *qp, uint64_t first, uint64_t last) {
+    doca_gpu_dev_verbs_mark_wqes_ready<sharing_mode, DOCA_GPUNETIO_VERBS_QP_SQ>(qp, first, last);
+    doca_gpu_dev_verbs_submit<sharing_mode,
+                              DOCA_GPUNETIO_VERBS_SYNC_SCOPE_SYS,
+                              DOCA_GPUNETIO_VERBS_NIC_HANDLER_GPU_SM_DB,
+                              DOCA_GPUNETIO_VERBS_QP_SQ>(qp, last + 1);
+}
+
+template<enum doca_gpu_dev_verbs_resource_sharing_mode sharing_mode>
+__device__ inline int
+pollOneOwner(doca_gpu_dev_verbs_qp *qp, uint64_t ticket) {
+    return doca_gpu_dev_verbs_poll_one_cq_at<sharing_mode,
+                                             DOCA_GPUNETIO_VERBS_QP_SQ,
+                                             DOCA_GPUNETIO_VERBS_CQ_64B>(qp, ticket);
 }
 
 #if defined(NIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31)

@@ -33,12 +33,15 @@ nixlDocaEngine::initializeNativeState() {
     auto &allocator = nixlGetDeviceAllocator();
     auto state = std::make_unique<nixlGpunetioNativeState>();
     state->cookie = nextCookie.fetch_add(1, std::memory_order_relaxed);
+    state->ownerMode = nativeOwnerMode_;
     if (state->cookie == 0) {
         throw std::runtime_error("GPUNETIO native context cookie exhausted");
     }
     checkAllocation(allocator.allocDeviceMem(sizeof(GpunetioDeviceLane), state->lane));
     checkAllocation(allocator.allocDeviceMem(sizeof(GpunetioDeviceContext), state->context));
     GpunetioDeviceLane lane{};
+    lane.owner_enabled = state->ownerMode ? 1U : 0U;
+    lane.owner_expected_token = state->ownerMode ? 1U : 0U;
     GpunetioDeviceContext context{state->lane.as<GpunetioDeviceLane>()};
     checkAllocation(allocator.copyHostToDevice(state->lane.get(), &lane, sizeof(lane)));
     checkAllocation(allocator.copyHostToDevice(state->context.get(), &context, sizeof(context)));
@@ -174,6 +177,8 @@ nixlDocaEngine::prepareNativeView(const nixl_meta_dlist_t *local,
         if (remote && nativeState_->peer.empty()) {
             GpunetioDeviceLane lane{};
             lane.qp = qp;
+            lane.owner_enabled = nativeState_->ownerMode ? 1U : 0U;
+            lane.owner_expected_token = nativeState_->ownerMode ? 1U : 0U;
             rc = allocator.copyHostToDevice(nativeState_->lane.get(), &lane, sizeof(lane));
             if (rc != NIXL_SUCCESS) {
                 return rc;
@@ -215,7 +220,9 @@ nixlDocaEngine::releaseMemView(nixlMemViewH handle) const {
     GpunetioDeviceLane snapshot{};
     if (allocator.copyDeviceToHost(&snapshot, nativeState_->lane.get(), sizeof(snapshot)) !=
             NIXL_SUCCESS ||
-        snapshot.phase != gpunetio_lane_phase_idle) {
+        snapshot.phase != gpunetio_lane_phase_idle || snapshot.owner_claim != 0 ||
+        snapshot.owner_staged_count != 0 || snapshot.owner_wqe_pending != 0 ||
+        snapshot.owner_cqe_pending != 0) {
         // No cancellation is implied by release: keep the view/MR pins until
         // engine teardown has successfully quiesced its QPs.
         return;
@@ -228,7 +235,9 @@ nixlDocaEngine::releaseMemView(nixlMemViewH handle) const {
         GpunetioDeviceLane lane{};
         if (allocator.copyDeviceToHost(&lane, nativeState_->lane.get(), sizeof(lane)) ==
                 NIXL_SUCCESS &&
-            lane.phase == gpunetio_lane_phase_idle && lane.generation == 0) {
+            lane.phase == gpunetio_lane_phase_idle && lane.generation == 0 &&
+            lane.owner_wqe_pending == 0 && lane.owner_cqe_pending == 0 &&
+            lane.owner_staged_count == 0 && lane.owner_claim == 0) {
             lane.qp = nullptr;
             if (allocator.copyHostToDevice(nativeState_->lane.get(), &lane, sizeof(lane)) ==
                     NIXL_SUCCESS &&

@@ -181,6 +181,22 @@ nixlDocaEngine::nixlDocaEngine(const nixlBackendInitParams *init_params)
         }
         nativeMode_ = native_option->second == "true";
     }
+    const auto owner_option = custom_params->find("native_device_owner");
+    if (owner_option != custom_params->end()) {
+        if (owner_option->second != "true" && owner_option->second != "false") {
+            throw std::invalid_argument("native_device_owner must be true or false");
+        }
+        nativeOwnerMode_ = owner_option->second == "true";
+        if (nativeOwnerMode_ && !nativeMode_) {
+            throw std::invalid_argument("native_device_owner requires native_device_api=true");
+        }
+#if !defined(NIXL_GPUNETIO_DEVICE_API_OWNER)
+        if (nativeOwnerMode_) {
+            throw std::invalid_argument(
+                "native_device_owner requires the public DOCA 3.5+ Device API profile");
+        }
+#endif
+    }
 #ifndef NIXL_GPUNETIO_DEVICE_API_HOST
     if (nativeMode_) {
         throw std::invalid_argument("GPUNETIO native Device API was not built");

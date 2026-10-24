@@ -15,3 +15,7 @@
 
 subdir('cpp')
 subdir('device')
+
+if get_option('gpunetio_device_api').enabled() and get_option('gpunetio_device_api_profile') == 'public'
+    subdir('gpunetio_device_owner')
+endif

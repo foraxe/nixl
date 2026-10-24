@@ -154,7 +154,11 @@ kernel_read(doca_gpu_dev_verbs_qp *qp, struct docaXferReqGpu *xferReqRing, uint3
         doca_gpu_dev_verbs_mark_wqes_ready(qp, base_wqe_idx, wqe_idx);
         doca_gpu_dev_verbs_submit(qp, wqe_idx + 1);
         // Wait for final CQE in block of iterations
+#if DOCA_VERSION_MAJOR > 3 || (DOCA_VERSION_MAJOR == 3 && DOCA_VERSION_MINOR >= 5)
+        if (doca_gpu_dev_verbs_poll_cq_at(qp, wqe_idx) != 0)
+#else
         if (doca_gpu_dev_verbs_poll_cq_at(doca_gpu_dev_verbs_qp_get_cq_sq(qp), wqe_idx) != 0)
+#endif
             printf("kernel_read: Error CQE!\n");
 
         DOCA_GPUNETIO_VOLATILE(xferReqRing[pos].last_wqe) = wqe_idx;
@@ -292,8 +296,13 @@ kernel_progress(struct docaXferCompletion *completion_list,
                                 completion_list[index].xferReqRingGpu->msg_sz,
                                 &out_ticket);
 
+#if DOCA_VERSION_MAJOR > 3 || (DOCA_VERSION_MAJOR == 3 && DOCA_VERSION_MINOR >= 5)
+                            doca_gpu_dev_verbs_wait(completion_list[index].xferReqRingGpu->qp_notif,
+                                                    out_ticket);
+#else
                             doca_gpu_dev_verbs_wait(completion_list[index].xferReqRingGpu->qp_notif,
                                                     &out_ticket);
+#endif
 #if ENABLE_DEBUG == 1
                             printf("Notif correctly sent %ld\n", out_ticket);
 #endif
@@ -384,7 +393,11 @@ kernel_progress(struct docaXferCompletion *completion_list,
                     notif_send_gpu->msg_size,
                     &out_ticket);
 
+#if DOCA_VERSION_MAJOR > 3 || (DOCA_VERSION_MAJOR == 3 && DOCA_VERSION_MINOR >= 5)
+                doca_gpu_dev_verbs_wait(notif_send_gpu->qp_gpu, out_ticket);
+#else
                 doca_gpu_dev_verbs_wait(notif_send_gpu->qp_gpu, &out_ticket);
+#endif
 #if ENABLE_DEBUG == 1
                 printf("Notif correctly sent %ld addr %lx msg_lkey %x qp %p size %d\n",
                        out_ticket,

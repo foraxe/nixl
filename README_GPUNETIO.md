@@ -162,6 +162,30 @@ The receiver and sender must use the endpoint-specific OOB interface, RDMA
 device, GID, and port values valid in their own environment. The commands
 above are an example configuration, not a hardware claim.
 
+## Exclusive owner lane
+
+For bounded asynchronous posting, also set `native_device_owner=true`. This
+requires `native_device_api=true` and the public DOCA 3.5+ profile. Use
+`nixlPutDeferred<THREAD>` to stage up to 32 single-WQE PUTs,
+`nixlGpuCommit` to publish the staged batch, and
+`nixlGpuOwnerGetXferStatus<THREAD>` to retire completions. Each engine starts
+with expected owner token 1; use a strictly increasing token for each lease.
+Only global CTA 0/thread 0 is admitted. The first call binds the active token
+to that PTX `%gridid`; another grid is rejected even with the same token.
+Release advances the expected token before publishing the lane as free, so an
+old token remains invalid across any number of later grid handoffs. The release
+call must be the old lease's final NIXL device API access. The caller must
+synchronize its stream before view release or engine teardown; stream identity
+and lifetime are not tracked.
+Owner commit submits with DOCA `SYNC_SCOPE_SYS` to preserve the legacy direct
+PUT's system-scope source-write-to-NIC ordering. DOCA 3.5's QP doorbell helper
+uses release-MMIO at SYS scope; GPU scope uses only GPU-scope fencing and
+relaxed MMIO. Both EXCLUSIVE and GPU-sharing-control builds use SYS scope, with
+no extra manual fence.
+The owner option keeps the native VRAM-only restriction and rejects host
+transfers and notifications. See `examples/gpunetio_device_owner/README.md`
+for the functional/performance reproducer and handoff contract.
+
 ## Current boundary
 
 This file intentionally contains the normal-path and bounded argument

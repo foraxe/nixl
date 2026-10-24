@@ -32,6 +32,28 @@ put(const memViewElem &, const memViewElem &, size_t, unsigned, uint64_t, xferSt
 
 template<level_t level>
 __device__ nixl_status_t
+putDeferred(const memViewElem &, const memViewElem &, size_t, uint64_t, xferStatusH *) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+__device__ inline nixl_status_t
+commit(const memViewElem &, uint64_t) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+__device__ inline nixl_status_t
+releaseOwner(const memViewElem &, uint64_t) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+template<level_t level>
+__device__ nixl_status_t
+ownerGetXferStatus(xferStatusH &, uint64_t) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+template<level_t level>
+__device__ nixl_status_t
 atomicAdd(uint64_t, const memViewElem &, unsigned, uint64_t, xferStatusH *) {
     return NIXL_ERR_NOT_SUPPORTED;
 }
@@ -58,6 +80,28 @@ getXferStatus(xferStatusH &) {
 template<level_t level>
 __device__ nixl_status_t
 put(const memViewElem &, const memViewElem &, size_t, unsigned, uint64_t, xferStatusH *) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+template<level_t level>
+__device__ nixl_status_t
+putDeferred(const memViewElem &, const memViewElem &, size_t, uint64_t, xferStatusH *) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+__device__ inline nixl_status_t
+commit(const memViewElem &, uint64_t) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+__device__ inline nixl_status_t
+releaseOwner(const memViewElem &, uint64_t) {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
+template<level_t level>
+__device__ nixl_status_t
+ownerGetXferStatus(xferStatusH &, uint64_t) {
     return NIXL_ERR_NOT_SUPPORTED;
 }
 
@@ -180,6 +224,80 @@ put(const memViewElem &src,
         setStatusModeTag(*xfer_status, mode);
     }
     return status;
+}
+
+template<level_t level>
+__device__ nixl_status_t
+putDeferred(const memViewElem &src,
+            const memViewElem &dst,
+            size_t bytes,
+            uint64_t owner_token,
+            xferStatusH *xfer_status) {
+    const nixlDeviceMemViewWrapper *src_wrapper = nullptr;
+    const nixlDeviceMemViewWrapper *dst_wrapper = nullptr;
+    nixl_device_exec_mode_t mode = nixl_device_exec_mode_t::NONE;
+    if (!unwrapViews(src, dst, src_wrapper, dst_wrapper, mode) ||
+        !prepareStatus(xfer_status, mode)) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    if (mode != nixl_device_exec_mode_t::GPUNETIO_DIRECT) {
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+#if defined(NIXL_ENABLE_GPUNETIO_DEVICE_API)
+    if (gpunetio::isStatusInProgress(*xfer_status)) {
+        return NIXL_ERR_REPOST_ACTIVE;
+    }
+#endif
+    const memViewElem backend_src{src_wrapper->backend_memview, src.index, src.offset};
+    const memViewElem backend_dst{dst_wrapper->backend_memview, dst.index, dst.offset};
+    const nixl_status_t status =
+        gpunetio::putDeferred<level>(backend_src, backend_dst, bytes, owner_token, xfer_status);
+    if (status == NIXL_IN_PROG) {
+        setStatusModeTag(*xfer_status, mode);
+    }
+    return status;
+}
+
+__device__ inline nixl_status_t
+commit(const memViewElem &owner_view, uint64_t owner_token) {
+    if (owner_view.mvh == nullptr) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    const nixlDeviceMemViewWrapper *wrapper = viewWrapper(owner_view.mvh);
+    if (!isKnownMode(wrapper->execution_mode) || wrapper->backend_memview == nullptr) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    if (wrapper->execution_mode != nixl_device_exec_mode_t::GPUNETIO_DIRECT) {
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+    const memViewElem backend_view{wrapper->backend_memview, owner_view.index, owner_view.offset};
+    return gpunetio::commit(backend_view, owner_token);
+}
+
+__device__ inline nixl_status_t
+releaseOwner(const memViewElem &owner_view, uint64_t owner_token) {
+    if (owner_view.mvh == nullptr) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    const nixlDeviceMemViewWrapper *wrapper = viewWrapper(owner_view.mvh);
+    if (!isKnownMode(wrapper->execution_mode) || wrapper->backend_memview == nullptr) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    if (wrapper->execution_mode != nixl_device_exec_mode_t::GPUNETIO_DIRECT) {
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+    const memViewElem backend_view{wrapper->backend_memview, owner_view.index, owner_view.offset};
+    return gpunetio::releaseOwner(backend_view, owner_token);
+}
+
+template<level_t level>
+__device__ nixl_status_t
+ownerGetXferStatus(xferStatusH &xfer_status, uint64_t owner_token) {
+    if (statusModeTag(xfer_status) !=
+        static_cast<uint32_t>(nixl_device_exec_mode_t::GPUNETIO_DIRECT)) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    return gpunetio::ownerGetXferStatus<level>(xfer_status, owner_token);
 }
 
 template<level_t level>
