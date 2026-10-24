@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fcntl.h>
 #include <fstream>
@@ -1466,6 +1467,18 @@ main(int argc, char **argv) {
         publishEndpoint(args, ep, arena, args.role);
 
         Control control(args);
+
+        // Exit before unwinding the registered arena and endpoint if peer work
+        // is still uncertain; the outer catch runs after their destructors.
+        struct RetainDuringUnwind {
+            const bool &armed;
+
+            ~RetainDuringUnwind() {
+                if (armed && std::uncaught_exceptions() != 0) {
+                    std::_Exit(10);
+                }
+            }
+        } retain{actors_launched};
         if (args.role == "consumer") {
             control.send('M');
             control.expect('C');
@@ -1527,13 +1540,13 @@ main(int argc, char **argv) {
                           "read consumer release gate");
                 if (!safe_host) {
                     control.expect('D');
-                    control.send('F');
+                    control.send('U');
                     std::cerr << "unsafe owner/view teardown; retaining registrations until "
                                  "process exit\n";
                     std::_Exit(10);
                 }
-                actors_launched = false;
                 control.expect('D');
+                actors_launched = false;
                 uint32_t errors[2]{};
                 double max_error = 0;
                 const bool ok =
@@ -1638,15 +1651,18 @@ main(int argc, char **argv) {
                                      cudaMemcpyDeviceToHost),
                           "copy source episode metrics");
                 if (!safe_host) {
-                    control.send('D');
+                    control.send('U');
                     (void)control.receive();
                     std::cerr << "unsafe owner/view teardown; retaining registrations until "
                                  "process exit\n";
                     std::_Exit(10);
                 }
-                actors_launched = false;
                 control.send('D');
                 const char consumer_result = control.receive();
+                if (consumer_result != 'V' && consumer_result != 'F') {
+                    throw std::runtime_error("peer did not confirm a safe stopped state");
+                }
+                actors_launched = false;
                 bool samples_valid = true;
                 bool step_samples_valid = true;
                 std::vector<uint64_t> step_intervals;
