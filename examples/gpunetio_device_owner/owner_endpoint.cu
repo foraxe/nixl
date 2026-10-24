@@ -97,7 +97,8 @@ ownerBatch(nixlMemViewH local,
            Result *out,
            Gate *gate,
            bool probe,
-           bool batch_commit) {
+           bool batch_commit,
+           bool check_precommit) {
     if (blockIdx.x || threadIdx.x >= 256) {
         return;
     }
@@ -143,17 +144,19 @@ ownerBatch(nixlMemViewH local,
             }
         }
         if (batch_commit) {
-            for (uint32_t j = 0; j < window; ++j) {
-                const auto rc =
-                    nixlGpuOwnerGetXferStatus<nixl_gpu_level_t::THREAD>(status[j], token);
-                ++out->precommit_checked;
-                if (rc != NIXL_IN_PROG) {
-                    out->precommit_status = rc;
-                    out->status = rc == NIXL_SUCCESS ? NIXL_ERR_BACKEND : rc;
-                    return;
+            if (check_precommit) {
+                for (uint32_t j = 0; j < window; ++j) {
+                    const auto rc =
+                        nixlGpuOwnerGetXferStatus<nixl_gpu_level_t::THREAD>(status[j], token);
+                    ++out->precommit_checked;
+                    if (rc != NIXL_IN_PROG) {
+                        out->precommit_status = rc;
+                        out->status = rc == NIXL_SUCCESS ? NIXL_ERR_BACKEND : rc;
+                        return;
+                    }
                 }
+                out->precommit_status = NIXL_IN_PROG;
             }
-            out->precommit_status = NIXL_IN_PROG;
             out->status = nixlGpuCommit({local, 0, 0}, token);
             if (out->status != NIXL_SUCCESS) {
                 return;
@@ -521,6 +524,13 @@ main(int argc, char **argv) {
     }
     const bool batch_commit =
         !fault_mode && batch_commit_env && std::strcmp(batch_commit_env, "1") == 0;
+    const char *precommit_env = std::getenv("OWNER_REPRO_PRECOMMIT_CHECK");
+    if (precommit_env && std::strcmp(precommit_env, "0") != 0 &&
+        std::strcmp(precommit_env, "1") != 0) {
+        std::cerr << "OWNER_REPRO_PRECOMMIT_CHECK must be 0 or 1\n";
+        return 2;
+    }
+    const bool check_precommit = !precommit_env || std::strcmp(precommit_env, "1") == 0;
     const std::string run = argv[3];
     const std::filesystem::path dir = argv[2];
     const int gpu = std::stoi(argv[4]);
@@ -638,7 +648,8 @@ main(int argc, char **argv) {
                 std::_Exit(0);
             }
             std::cout << "profile,role,batch,window,phase,gpu_elapsed_ns,wrong_grid_status,"
-                         "capacity_status,stale_token_status,release_status\n";
+                         "capacity_status,stale_token_status,release_status,"
+                         "batch_commit,precommit_check,precommit_checked,expected_commits\n";
             for (uint32_t b = 0; b < 3 * (kWarmup + kMeasured); ++b) {
                 const uint32_t rep = b % (kWarmup + kMeasured), epoch = b + 1,
                                window = kWindows[b / (kWarmup + kMeasured)];
@@ -654,7 +665,8 @@ main(int argc, char **argv) {
                                                     static_cast<Result *>(result.p),
                                                     static_cast<Gate *>(gate.p),
                                                     b == 0,
-                                                    batch_commit);
+                                                    batch_commit,
+                                                    check_precommit);
                 if (b == 0) {
                     wrongGrid<<<1, 1, 0, probe.s>>>(
                         local, remote, epoch, static_cast<Gate *>(gate.p));
@@ -679,16 +691,16 @@ main(int argc, char **argv) {
                     cudaOk(cudaMemcpy(&g, gate.p, sizeof(g), cudaMemcpyDeviceToHost),
                            "read wrong-owner status");
                 }
-                if ((batch_commit &&
+                if ((batch_commit && check_precommit &&
                      (r.precommit_status != NIXL_IN_PROG || r.precommit_checked != kWqes)) ||
-                    (!batch_commit && r.precommit_checked != 0)) {
+                    ((!batch_commit || !check_precommit) && r.precommit_checked != 0)) {
                     std::ostringstream detail;
                     detail << "precommit assertion: batch=" << b << " window=" << window
                            << " enabled=" << batch_commit
                            << " precommit_status=" << r.precommit_status
                            << " expected_status=" << NIXL_IN_PROG
                            << " precommit_checked=" << r.precommit_checked
-                           << " expected_checked=" << (batch_commit ? kWqes : 0)
+                           << " expected_checked=" << (batch_commit && check_precommit ? kWqes : 0)
                            << " kernel_status=" << r.status << " release_status=" << r.release;
                     publish(dir / (tag + ".failed"), detail.str());
                     std::cerr << detail.str() << "\n";
@@ -731,7 +743,9 @@ main(int argc, char **argv) {
                 std::cout << profile() << ",sender," << b << "," << window << ","
                           << (rep < kWarmup ? "warmup" : "measure") << "," << r.elapsed_ns << ","
                           << r.wrong_owner << "," << r.capacity << "," << stale_status << ","
-                          << r.release << "\n";
+                          << r.release << "," << batch_commit << "," << check_precommit << ","
+                          << r.precommit_checked << ","
+                          << (batch_commit ? kWqes / window + 1 : kWqes + 1) << "\n";
             }
         } else {
             const auto peer = run + "." + profile() + ".sender";
