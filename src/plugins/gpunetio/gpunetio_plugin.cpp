@@ -60,6 +60,7 @@ get_backend_options() {
     params["cuda_streams"] = "";
     params["gid_index"] = "";
     params["native_device_api"] = "false";
+    params["native_device_owner"] = "false";
     return params;
 }
 

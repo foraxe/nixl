@@ -45,8 +45,9 @@
 #error "Build this test with NIXL_ENABLE_GPUNETIO_DEVICE_API=1"
 #endif
 
-#if !defined(NIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31) || !NIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31
-#error "Build this test with NIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31=1"
+#if (!defined(NIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31) || !NIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31) && \
+    (!defined(NIXL_GPUNETIO_DEVICE_API_PUBLIC) || !NIXL_GPUNETIO_DEVICE_API_PUBLIC)
+#error "Build this test with a GPUNETIO Device API SDK profile"
 #endif
 
 namespace {
@@ -473,11 +474,11 @@ copyResult(DeviceBuffer &device_result) {
 
 uint64_t
 pollCycles() {
-    cudaDeviceProp prop{};
+    int clock_khz = 0;
     int device = 0;
     EXPECT_EQ(cudaGetDevice(&device), cudaSuccess);
-    EXPECT_EQ(cudaGetDeviceProperties(&prop, device), cudaSuccess);
-    return static_cast<uint64_t>(prop.clockRate) *
+    EXPECT_EQ(cudaDeviceGetAttribute(&clock_khz, cudaDevAttrClockRate, device), cudaSuccess);
+    return static_cast<uint64_t>(clock_khz) *
         static_cast<uint64_t>(
                std::chrono::duration_cast<std::chrono::milliseconds>(kPollTimeout).count());
 }

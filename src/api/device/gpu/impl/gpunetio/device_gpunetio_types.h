@@ -42,6 +42,19 @@ struct alignas(16) GpunetioDeviceLane {
     alignas(8) uint64_t last_success_generation;
     alignas(4) uint32_t phase;
     alignas(4) uint32_t failed;
+    alignas(8) uint64_t owner_generation;
+    alignas(8) uint64_t owner_committed_generation;
+    alignas(8) uint64_t owner_retired_generation;
+    alignas(8) uint64_t owner_staged_first;
+    alignas(8) uint64_t owner_staged_last;
+    alignas(4) uint32_t owner_wqe_pending;
+    alignas(4) uint32_t owner_cqe_pending;
+    alignas(4) uint32_t owner_staged_count;
+    alignas(4) uint32_t owner_enabled;
+    alignas(4) uint32_t owner_claim;
+    alignas(8) uint64_t owner_token;
+    alignas(8) uint64_t owner_grid_id;
+    alignas(8) uint64_t owner_expected_token;
 };
 
 // The host allocates this once per native engine.  Every native local and
@@ -74,12 +87,13 @@ struct GpunetioStatusPayload {
     GpunetioDeviceLane *lane;
     uint64_t generation;
     uint64_t ticket;
+    uint64_t owner_token;
     int32_t cached_status;
     uint32_t initialized;
 };
 
 static_assert(sizeof(GpunetioViewElem) == 32);
-static_assert(sizeof(GpunetioStatusPayload) == 32);
+static_assert(sizeof(GpunetioStatusPayload) == 40);
 static_assert(sizeof(GpunetioStatusPayload) <= 60);
 static_assert(alignof(GpunetioDeviceLane) >= 16);
 static_assert(std::is_standard_layout_v<GpunetioDeviceLane>);

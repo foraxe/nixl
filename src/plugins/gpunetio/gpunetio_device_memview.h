@@ -25,6 +25,7 @@ struct nixlGpunetioNativeViewStorage {
 struct nixlGpunetioNativeState {
     std::mutex mutex;
     uint64_t cookie = 0;
+    bool ownerMode = false;
     std::string peer;
     size_t remoteViews = 0;
     nixlDeviceMem lane;

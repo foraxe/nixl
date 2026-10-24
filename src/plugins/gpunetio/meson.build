@@ -28,14 +28,22 @@ if not get_option('gpunetio_device_api').disabled()
         endif
         native_device_args += ['-DNIXL_GPUNETIO_DEVICE_API_LEGACY_DOCA31=1']
     else
+        if not doca_gpunetio_dep.version().version_compare('>=3.5.0')
+            error('SDK_CONTRACT_UNVERIFIED: native_device_owner requires DOCA 3.5 or newer')
+        endif
         native_device_args += ['-DNIXL_GPUNETIO_DEVICE_API_PUBLIC=1']
+        compile_flags += ['-DNIXL_GPUNETIO_DEVICE_API_OWNER=1']
     endif
     if not nvcc.compiles('''
-        #include <gpu/impl/gpunetio/device_gpunetio.cuh>
+        #include <gpu/nixl_device.cuh>
         using namespace nixl::gpu;
         __global__ void probe(memViewElem a, memViewElem b, xferStatusH *s) {
-            impl::gpunetio::put<level_t::THREAD>(a, b, 4096, 0, 0, s);
-            impl::gpunetio::getXferStatus<level_t::THREAD>(*s);
+            put<level_t::THREAD>(a, b, 4096, 0, 0, s);
+            getXferStatus<level_t::THREAD>(*s);
+            putDeferred<level_t::THREAD>(a, b, 4096, 1, s);
+            commit(a, 1);
+            ownerGetXferStatus<level_t::THREAD>(*s, 1);
+            releaseOwner(a, 1);
         }
         int main() { return 0; }
     ''', dependencies: plugin_gpunetio_deps,

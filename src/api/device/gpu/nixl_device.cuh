@@ -41,6 +41,48 @@ put(const memViewElem &src,
     return impl::put<level>(src, dst, size, channel_id, flags, xfer_status);
 }
 
+/**
+ * @brief Stage one bounded GPUNETIO owner PUT without ringing the doorbell.
+ *
+ * Available only for a GPUNETIO engine configured with native_device_owner=true.
+ * A per-engine token sequence starts at 1 and increases by one after each
+ * released lease. The active token binds the lane to one CUDA grid; pass it
+ * for stage, commit, poll, and release. Closed tokens cannot be reused.
+ * The caller must keep the stream and views alive, synchronize before release,
+ * and retire accepted work; NIXL does not track caller stream lifetime.
+ */
+template<level_t level = level_t::THREAD>
+__device__ nixl_status_t
+putDeferred(const memViewElem &src,
+            const memViewElem &dst,
+            size_t size,
+            uint64_t owner_token,
+            xferStatusH *xfer_status) {
+    return impl::putDeferred<level>(src, dst, size, owner_token, xfer_status);
+}
+
+/** @brief Commit all deferred PUTs staged by the owner token on this view. */
+__device__ inline nixl_status_t
+commit(const memViewElem &owner_view, uint64_t owner_token) {
+    return impl::commit(owner_view, owner_token);
+}
+
+/**
+ * @brief Release a fully drained owner lease; this must be the actor's final
+ * NIXL device API access for this grid.
+ */
+__device__ inline nixl_status_t
+releaseOwner(const memViewElem &owner_view, uint64_t owner_token) {
+    return impl::releaseOwner(owner_view, owner_token);
+}
+
+/** @brief Poll a deferred owner PUT using the same explicit owner token. */
+template<level_t level = level_t::THREAD>
+__device__ nixl_status_t
+ownerGetXferStatus(xferStatusH &xfer_status, uint64_t owner_token) {
+    return impl::ownerGetXferStatus<level>(xfer_status, owner_token);
+}
+
 template<level_t level = level_t::THREAD>
 __device__ nixl_status_t
 atomicAdd(uint64_t value,
@@ -73,6 +115,32 @@ nixlPut(const nixlMemViewElem &src,
         uint64_t flags = 0,
         nixlGpuXferStatusH *xfer_status = nullptr) {
     return nixl::gpu::put<level>(src, dst, size, channel_id, flags, xfer_status);
+}
+
+template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
+__device__ nixl_status_t
+nixlPutDeferred(const nixlMemViewElem &src,
+                const nixlMemViewElem &dst,
+                size_t size,
+                uint64_t owner_token,
+                nixlGpuXferStatusH *xfer_status) {
+    return nixl::gpu::putDeferred<level>(src, dst, size, owner_token, xfer_status);
+}
+
+__device__ inline nixl_status_t
+nixlGpuCommit(const nixlMemViewElem &owner_view, uint64_t owner_token) {
+    return nixl::gpu::commit(owner_view, owner_token);
+}
+
+__device__ inline nixl_status_t
+nixlGpuReleaseOwner(const nixlMemViewElem &owner_view, uint64_t owner_token) {
+    return nixl::gpu::releaseOwner(owner_view, owner_token);
+}
+
+template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
+__device__ nixl_status_t
+nixlGpuOwnerGetXferStatus(nixlGpuXferStatusH &xfer_status, uint64_t owner_token) {
+    return nixl::gpu::ownerGetXferStatus<level>(xfer_status, owner_token);
 }
 
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
