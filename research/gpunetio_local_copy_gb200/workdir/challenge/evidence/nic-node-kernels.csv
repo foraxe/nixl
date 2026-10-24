@@ -1,0 +1,6 @@
+Generating SQLite file /tmp/kernel-local-copy-challenge-20261023/nic-warp-node.sqlite from /tmp/kernel-local-copy-challenge-20261023/nic-warp-node.nsys-rep
+Processing [/tmp/kernel-local-copy-challenge-20261023/nic-warp-node.sqlite] with [/usr/local/cuda-13.0/NsightSystems-cli-2025.4.1/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+97.3,615292,20,30764.6,28671.5,25920,72992,10041.9,"transfer(local_copy::Copy *, const unsigned char *, unsigned char *, unsigned long, int, int, int, int, unsigned long *, const int *)"
+2.7,17056,1,17056.0,17056.0,17056,17056,0.0,"verify(const unsigned char *, unsigned long, unsigned long, int, int, unsigned long *, const int *)"
+

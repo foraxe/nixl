@@ -1,0 +1,47 @@
+{
+  "ce2d-path": {
+    "graph_memcpy": [
+      [
+        1,
+        36864,
+        37748736
+      ]
+    ],
+    "graph_kernels": [
+      [
+        "consume",
+        6
+      ]
+    ]
+  },
+  "sm-overlap": {
+    "graph_memcpy": [],
+    "graph_kernels": [
+      [
+        "nvjet_tss_448x64_64x2_1x2_h_badd_coopB_NNN",
+        24
+      ],
+      [
+        "sm_copy",
+        6
+      ]
+    ],
+    "overlap": [
+      {
+        "correlation": 7357,
+        "sm_copy1_us": 205.057,
+        "overlap_with_compute0_us": 204.417
+      },
+      {
+        "correlation": 7381,
+        "sm_copy1_us": 194.913,
+        "overlap_with_compute0_us": 194.913
+      },
+      {
+        "correlation": 7406,
+        "sm_copy1_us": 169.536,
+        "overlap_with_compute0_us": 169.536
+      }
+    ]
+  }
+}

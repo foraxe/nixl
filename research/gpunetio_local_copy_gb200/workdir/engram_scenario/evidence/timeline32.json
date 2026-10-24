@@ -1,0 +1,248 @@
+[
+  {
+    "mode": "SERIAL",
+    "replay": 0,
+    "correlation": 7411,
+    "actor1_start_delays_ms": [
+      1.60148,
+      1.607336,
+      1.603304,
+      1.602792,
+      1.604744,
+      1.604104,
+      1.60612,
+      1.605704
+    ],
+    "actor1_duration_ms": [
+      1.179623,
+      1.110758,
+      1.176743,
+      1.167207,
+      1.128102,
+      1.177287,
+      1.185639,
+      1.251655
+    ],
+    "actor1_after_compute0": 8,
+    "compute0_kernel_sum_ms": 1.579912,
+    "compute0_span_ms": 1.580776,
+    "actor1_streams": [
+      38,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53
+    ],
+    "compute0_streams": [
+      38
+    ]
+  },
+  {
+    "mode": "SERIAL",
+    "replay": 1,
+    "correlation": 7435,
+    "actor1_start_delays_ms": [
+      1.601769,
+      1.605993,
+      1.603369,
+      1.607337,
+      1.604681,
+      1.602953,
+      1.606313,
+      1.604361
+    ],
+    "actor1_duration_ms": [
+      1.15575,
+      1.224071,
+      1.138502,
+      1.132422,
+      1.096614,
+      1.143302,
+      1.15815,
+      1.21319
+    ],
+    "actor1_after_compute0": 8,
+    "compute0_kernel_sum_ms": 1.579881,
+    "compute0_span_ms": 1.580777,
+    "actor1_streams": [
+      38,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53
+    ],
+    "compute0_streams": [
+      38
+    ]
+  },
+  {
+    "mode": "SERIAL",
+    "replay": 2,
+    "correlation": 7460,
+    "actor1_start_delays_ms": [
+      1.600201,
+      1.603081,
+      1.602057,
+      1.604553,
+      1.603689,
+      1.605801,
+      1.604745,
+      1.601833
+    ],
+    "actor1_duration_ms": [
+      1.150278,
+      1.212646,
+      1.136486,
+      1.156134,
+      1.093766,
+      1.137766,
+      1.155686,
+      1.068709
+    ],
+    "actor1_after_compute0": 8,
+    "compute0_kernel_sum_ms": 1.579433,
+    "compute0_span_ms": 1.580329,
+    "actor1_streams": [
+      38,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53
+    ],
+    "compute0_streams": [
+      38
+    ]
+  },
+  {
+    "mode": "LOOKAHEAD",
+    "replay": 0,
+    "correlation": 7484,
+    "actor1_start_delays_ms": [
+      0.01472,
+      0.016448,
+      0.01856,
+      0.018048,
+      0.019872,
+      0.019456,
+      0.01584,
+      0.021024
+    ],
+    "actor1_duration_ms": [
+      1.237639,
+      1.133798,
+      1.253959,
+      1.265191,
+      1.323751,
+      1.279879,
+      1.217895,
+      1.347783
+    ],
+    "actor1_after_compute0": 0,
+    "compute0_kernel_sum_ms": 2.072875,
+    "compute0_span_ms": 2.074123,
+    "actor1_streams": [
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "compute0_streams": [
+      38
+    ]
+  },
+  {
+    "mode": "LOOKAHEAD",
+    "replay": 1,
+    "correlation": 7508,
+    "actor1_start_delays_ms": [
+      0.014368,
+      0.016448,
+      0.018912,
+      0.017888,
+      0.01536,
+      0.019328,
+      0.016832,
+      0.020544
+    ],
+    "actor1_duration_ms": [
+      1.241031,
+      1.13575,
+      1.257127,
+      1.245991,
+      1.177319,
+      1.269543,
+      1.270919,
+      1.151238
+    ],
+    "actor1_after_compute0": 0,
+    "compute0_kernel_sum_ms": 2.050411,
+    "compute0_span_ms": 2.051659,
+    "actor1_streams": [
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "compute0_streams": [
+      38
+    ]
+  },
+  {
+    "mode": "LOOKAHEAD",
+    "replay": 2,
+    "correlation": 7533,
+    "actor1_start_delays_ms": [
+      0.01472,
+      0.01808,
+      0.016864,
+      0.019552,
+      0.01824,
+      0.0208,
+      0.019712,
+      0.015904
+    ],
+    "actor1_duration_ms": [
+      1.236999,
+      1.354632,
+      1.219111,
+      1.289575,
+      1.16455,
+      1.274567,
+      1.267015,
+      1.128262
+    ],
+    "actor1_after_compute0": 0,
+    "compute0_kernel_sum_ms": 2.068779,
+    "compute0_span_ms": 2.069963,
+    "actor1_streams": [
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "compute0_streams": [
+      38
+    ]
+  }
+]

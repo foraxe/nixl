@@ -1,0 +1,582 @@
+[
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 1,
+    "bytes": 64,
+    "nic_warp_us": 14.7101,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 13.4262,
+    "sm_us": 4.7072,
+    "median_paired_speedup": 0.5735189174861866,
+    "bootstrap95": [
+      0.5696810745605118,
+      0.5787180236708112
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 14.7101,
+      "CUDA_PARALLEL_GRAPH": 13.576,
+      "SM_GATHER": 4.7072,
+      "CUDA_GRAPH": 13.5405,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 13.4262,
+      "NIC": 13.0627,
+      "CUDA_2D_GRAPH": 13.5478,
+      "CUDA_2D_PARALLEL_GRAPH": 13.6,
+      "CUDA_2D_PACKED_GRAPH": 13.6224
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 1,
+    "bytes": 4096,
+    "nic_warp_us": 15.5552,
+    "best_cuda": "CUDA_2D_GRAPH",
+    "best_cuda_us": 8.4765,
+    "sm_us": 6.2394,
+    "median_paired_speedup": 0.5419473873688542,
+    "bootstrap95": [
+      0.5402736390143869,
+      0.5457618388436404
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 15.5552,
+      "CUDA_PARALLEL_GRAPH": 13.473,
+      "SM_GATHER": 6.2394,
+      "CUDA_GRAPH": 8.5286,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 8.5587,
+      "NIC": 13.807,
+      "CUDA_2D_GRAPH": 8.4765,
+      "CUDA_2D_PARALLEL_GRAPH": 13.5814,
+      "CUDA_2D_PACKED_GRAPH": 13.4931
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 8,
+    "bytes": 64,
+    "nic_warp_us": 18.4109,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 14.3427,
+    "sm_us": 4.8442,
+    "median_paired_speedup": 0.7807165563490681,
+    "bootstrap95": [
+      0.7776849777912759,
+      0.7829112102069968
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 18.4109,
+      "CUDA_PARALLEL_GRAPH": 30.056,
+      "SM_GATHER": 4.8442,
+      "CUDA_GRAPH": 24.7382,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 14.3427,
+      "NIC": 32.5658,
+      "CUDA_2D_GRAPH": 17.3059,
+      "CUDA_2D_PARALLEL_GRAPH": 23.1235,
+      "CUDA_2D_PACKED_GRAPH": 16.4157
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 8,
+    "bytes": 4096,
+    "nic_warp_us": 19.2013,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 14.5123,
+    "sm_us": 27.0432,
+    "median_paired_speedup": 0.7591616716179759,
+    "bootstrap95": [
+      0.7533812814757334,
+      0.770060135005422
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 19.2013,
+      "CUDA_PARALLEL_GRAPH": 34.1891,
+      "SM_GATHER": 27.0432,
+      "CUDA_GRAPH": 28.032,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 14.5123,
+      "NIC": 31.6762,
+      "CUDA_2D_GRAPH": 21.4045,
+      "CUDA_2D_PARALLEL_GRAPH": 23.7587,
+      "CUDA_2D_PACKED_GRAPH": 18.0269
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 32,
+    "bytes": 64,
+    "nic_warp_us": 30.3546,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 21.0746,
+    "sm_us": 5.136,
+    "median_paired_speedup": 0.6934555637086346,
+    "bootstrap95": [
+      0.6859915795299559,
+      0.699618242597269
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 30.3546,
+      "CUDA_PARALLEL_GRAPH": 46.9318,
+      "SM_GATHER": 5.136,
+      "CUDA_GRAPH": 83.1747,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 21.0746,
+      "NIC": 110.2608,
+      "CUDA_2D_GRAPH": 40.5386,
+      "CUDA_2D_PARALLEL_GRAPH": 45.6314,
+      "CUDA_2D_PACKED_GRAPH": 23.3475
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 32,
+    "bytes": 4096,
+    "nic_warp_us": 29.1466,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 25.0784,
+    "sm_us": 98.2554,
+    "median_paired_speedup": 0.8622240673011604,
+    "bootstrap95": [
+      0.8467088967675239,
+      0.8626446887200211
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 29.1466,
+      "CUDA_PARALLEL_GRAPH": 55.615,
+      "SM_GATHER": 98.2554,
+      "CUDA_GRAPH": 90.9651,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 25.0784,
+      "NIC": 102.9482,
+      "CUDA_2D_GRAPH": 43.9574,
+      "CUDA_2D_PARALLEL_GRAPH": 49.6336,
+      "CUDA_2D_PACKED_GRAPH": 27.0266
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 128,
+    "bytes": 64,
+    "nic_warp_us": 102.7834,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 37.6858,
+    "sm_us": 10.7664,
+    "median_paired_speedup": 0.3662809062696513,
+    "bootstrap95": [
+      0.349824141373179,
+      0.37129147313671274
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 102.7834,
+      "CUDA_PARALLEL_GRAPH": 172.1958,
+      "SM_GATHER": 10.7664,
+      "CUDA_GRAPH": 308.7882,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 37.6858,
+      "NIC": 405.7021,
+      "CUDA_2D_GRAPH": 41.1213,
+      "CUDA_2D_PARALLEL_GRAPH": 47.2182,
+      "CUDA_2D_PACKED_GRAPH": 41.5882
+    }
+  },
+  {
+    "run": "affine-packed.jsonl",
+    "seed": 0,
+    "count": 128,
+    "bytes": 4096,
+    "nic_warp_us": 108.7571,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 48.4416,
+    "sm_us": 391.1866,
+    "median_paired_speedup": 0.4433735336308356,
+    "bootstrap95": [
+      0.43055487871596426,
+      0.4512789014171017
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 108.7571,
+      "CUDA_PARALLEL_GRAPH": 223.2422,
+      "SM_GATHER": 391.1866,
+      "CUDA_GRAPH": 340.2026,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 48.4416,
+      "NIC": 411.4733,
+      "CUDA_2D_GRAPH": 53.4762,
+      "CUDA_2D_PARALLEL_GRAPH": 56.7904,
+      "CUDA_2D_PACKED_GRAPH": 51.6448
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 1,
+    "bytes": 64,
+    "nic_warp_us": 14.5882,
+    "best_cuda": "CUDA_PARALLEL_GRAPH",
+    "best_cuda_us": 8.992,
+    "sm_us": 4.761,
+    "median_paired_speedup": 0.6126010160111238,
+    "bootstrap95": [
+      0.6095419168638607,
+      0.613926830942412
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 14.5882,
+      "CUDA_PARALLEL_GRAPH": 8.992,
+      "SM_GATHER": 4.761,
+      "CUDA_GRAPH": 13.9514,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 14.1542,
+      "NIC": 12.8381,
+      "CUDA_2D_GRAPH": 9.0256,
+      "CUDA_2D_PARALLEL_GRAPH": 13.7958,
+      "CUDA_2D_PACKED_GRAPH": 14.0381
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 1,
+    "bytes": 4096,
+    "nic_warp_us": 15.4051,
+    "best_cuda": "CUDA_PARALLEL_GRAPH",
+    "best_cuda_us": 9.0064,
+    "sm_us": 6.2995,
+    "median_paired_speedup": 0.5786728203537077,
+    "bootstrap95": [
+      0.576083004363183,
+      0.5851958117766195
+    ],
+    "wins": 0,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 15.4051,
+      "CUDA_PARALLEL_GRAPH": 9.0064,
+      "SM_GATHER": 6.2995,
+      "CUDA_GRAPH": 9.0499,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 9.0762,
+      "NIC": 13.6902,
+      "CUDA_2D_GRAPH": 14.0506,
+      "CUDA_2D_PARALLEL_GRAPH": 14.0515,
+      "CUDA_2D_PACKED_GRAPH": 9.015
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 8,
+    "bytes": 64,
+    "nic_warp_us": 18.0458,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 18.6253,
+    "sm_us": 4.945,
+    "median_paired_speedup": 1.032977089075854,
+    "bootstrap95": [
+      1.03118680502845,
+      1.036331872885586
+    ],
+    "wins": 7,
+    "wins_over_10pct": 0,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 18.0458,
+      "CUDA_PARALLEL_GRAPH": 31.4154,
+      "SM_GATHER": 4.945,
+      "CUDA_GRAPH": 25.7174,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 18.6253,
+      "NIC": 32.4163,
+      "CUDA_2D_GRAPH": 21.1942,
+      "CUDA_2D_PARALLEL_GRAPH": 24.5773,
+      "CUDA_2D_PACKED_GRAPH": 20.616
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 8,
+    "bytes": 4096,
+    "nic_warp_us": 18.6342,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 19.6144,
+    "sm_us": 27.2864,
+    "median_paired_speedup": 1.0531956592943401,
+    "bootstrap95": [
+      1.0394650696032026,
+      1.0590501676554036
+    ],
+    "wins": 7,
+    "wins_over_10pct": 1,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 18.6342,
+      "CUDA_PARALLEL_GRAPH": 31.8176,
+      "SM_GATHER": 27.2864,
+      "CUDA_GRAPH": 29.527,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 19.6144,
+      "NIC": 31.2915,
+      "CUDA_2D_GRAPH": 21.9821,
+      "CUDA_2D_PARALLEL_GRAPH": 25.0003,
+      "CUDA_2D_PACKED_GRAPH": 21.3632
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 32,
+    "bytes": 64,
+    "nic_warp_us": 30.4365,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 46.9302,
+    "sm_us": 5.1066,
+    "median_paired_speedup": 1.5414849169644733,
+    "bootstrap95": [
+      1.535840629261448,
+      1.5520186207600404
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 30.4365,
+      "CUDA_PARALLEL_GRAPH": 53.2662,
+      "SM_GATHER": 5.1066,
+      "CUDA_GRAPH": 84.4362,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 46.9302,
+      "NIC": 110.1142,
+      "CUDA_2D_GRAPH": 56.472,
+      "CUDA_2D_PARALLEL_GRAPH": 64.4739,
+      "CUDA_2D_PACKED_GRAPH": 52.4963
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 32,
+    "bytes": 4096,
+    "nic_warp_us": 28.5798,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 51.0157,
+    "sm_us": 99.5066,
+    "median_paired_speedup": 1.7834290029155335,
+    "bootstrap95": [
+      1.7771328000895739,
+      1.8008531039588254
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 28.5798,
+      "CUDA_PARALLEL_GRAPH": 61.7632,
+      "SM_GATHER": 99.5066,
+      "CUDA_GRAPH": 91.3178,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 51.0157,
+      "NIC": 103.0861,
+      "CUDA_2D_GRAPH": 60.6154,
+      "CUDA_2D_PARALLEL_GRAPH": 69.0218,
+      "CUDA_2D_PACKED_GRAPH": 56.7328
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 128,
+    "bytes": 64,
+    "nic_warp_us": 102.248,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 161.959,
+    "sm_us": 10.9651,
+    "median_paired_speedup": 1.5841164163929298,
+    "bootstrap95": [
+      1.569471785017529,
+      1.586034976152623
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 102.248,
+      "CUDA_PARALLEL_GRAPH": 202.8346,
+      "SM_GATHER": 10.9651,
+      "CUDA_GRAPH": 314.2941,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 161.959,
+      "NIC": 405.8544,
+      "CUDA_2D_GRAPH": 203.44,
+      "CUDA_2D_PARALLEL_GRAPH": 204.8531,
+      "CUDA_2D_PACKED_GRAPH": 166.1245
+    }
+  },
+  {
+    "run": "random-packed.jsonl",
+    "seed": 20261023,
+    "count": 128,
+    "bytes": 4096,
+    "nic_warp_us": 107.537,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 187.1731,
+    "sm_us": 399.8502,
+    "median_paired_speedup": 1.7381509356257572,
+    "bootstrap95": [
+      1.6988382703387528,
+      1.74590147945236
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 107.537,
+      "CUDA_PARALLEL_GRAPH": 240.3539,
+      "SM_GATHER": 399.8502,
+      "CUDA_GRAPH": 352.5882,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 187.1731,
+      "NIC": 411.3827,
+      "CUDA_2D_GRAPH": 229.8016,
+      "CUDA_2D_PARALLEL_GRAPH": 230.8345,
+      "CUDA_2D_PACKED_GRAPH": 189.3245
+    }
+  },
+  {
+    "run": "seed2-32.jsonl",
+    "seed": 20261024,
+    "count": 32,
+    "bytes": 4096,
+    "nic_warp_us": 29.1712,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 51.7024,
+    "sm_us": 98.321,
+    "median_paired_speedup": 1.7766390736531898,
+    "bootstrap95": [
+      1.7696604600219057,
+      1.7837113317244406
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 29.1712,
+      "CUDA_PARALLEL_GRAPH": 55.497,
+      "SM_GATHER": 98.321,
+      "CUDA_GRAPH": 91.271,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 51.7024,
+      "NIC": 102.881,
+      "CUDA_2D_GRAPH": 62.2845,
+      "CUDA_2D_PARALLEL_GRAPH": 66.5478,
+      "CUDA_2D_PACKED_GRAPH": 56.6506
+    }
+  },
+  {
+    "run": "seed2-128.jsonl",
+    "seed": 20261024,
+    "count": 128,
+    "bytes": 4096,
+    "nic_warp_us": 109.1942,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 182.5222,
+    "sm_us": 385.9789,
+    "median_paired_speedup": 1.6705675394663622,
+    "bootstrap95": [
+      1.633368309824091,
+      1.6733342979755337
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 109.1942,
+      "CUDA_PARALLEL_GRAPH": 207.7677,
+      "SM_GATHER": 385.9789,
+      "CUDA_GRAPH": 342.745,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 182.5222,
+      "NIC": 411.4509,
+      "CUDA_2D_GRAPH": 229.2509,
+      "CUDA_2D_PARALLEL_GRAPH": 231.2864,
+      "CUDA_2D_PACKED_GRAPH": 184.6298
+    }
+  },
+  {
+    "run": "seed3-32.jsonl",
+    "seed": 20261025,
+    "count": 32,
+    "bytes": 4096,
+    "nic_warp_us": 28.8179,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 52.9424,
+    "sm_us": 97.7728,
+    "median_paired_speedup": 1.8315355608173287,
+    "bootstrap95": [
+      1.8305867708585457,
+      1.8569569607778496
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 28.8179,
+      "CUDA_PARALLEL_GRAPH": 55.2659,
+      "SM_GATHER": 97.7728,
+      "CUDA_GRAPH": 91.28,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 52.9424,
+      "NIC": 102.9901,
+      "CUDA_2D_GRAPH": 64.1139,
+      "CUDA_2D_PARALLEL_GRAPH": 70.2982,
+      "CUDA_2D_PACKED_GRAPH": 60.2986
+    }
+  },
+  {
+    "run": "seed3-128.jsonl",
+    "seed": 20261025,
+    "count": 128,
+    "bytes": 4096,
+    "nic_warp_us": 108.3686,
+    "best_cuda": "CUDA_2D_PACKED_SERIAL_GRAPH",
+    "best_cuda_us": 175.521,
+    "sm_us": 388.5949,
+    "median_paired_speedup": 1.6258699822747604,
+    "bootstrap95": [
+      1.6149499145847954,
+      1.6408736863486977
+    ],
+    "wins": 7,
+    "wins_over_10pct": 7,
+    "pairs": 7,
+    "all_arm_medians": {
+      "NIC_WARP": 108.3686,
+      "CUDA_PARALLEL_GRAPH": 322.5312,
+      "SM_GATHER": 388.5949,
+      "CUDA_GRAPH": 342.9322,
+      "CUDA_2D_PACKED_SERIAL_GRAPH": 175.521,
+      "NIC": 411.2886,
+      "CUDA_2D_GRAPH": 219.5245,
+      "CUDA_2D_PARALLEL_GRAPH": 184.7952,
+      "CUDA_2D_PACKED_GRAPH": 179.2198
+    }
+  }
+]

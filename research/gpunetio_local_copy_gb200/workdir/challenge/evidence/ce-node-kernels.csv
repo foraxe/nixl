@@ -1,0 +1,6 @@
+Generating SQLite file /tmp/kernel-local-copy-challenge-20261023/ce-packed-node.sqlite from /tmp/kernel-local-copy-challenge-20261023/ce-packed-node.nsys-rep
+Processing [/tmp/kernel-local-copy-challenge-20261023/ce-packed-node.sqlite] with [/usr/local/cuda-13.0/NsightSystems-cli-2025.4.1/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+71.7,43392,20,2169.6,2144.0,2112,2592,100.4,"transfer(local_copy::Copy *, const unsigned char *, unsigned char *, unsigned long, int, int, int, int, unsigned long *, const int *)"
+28.3,17088,1,17088.0,17088.0,17088,17088,0.0,"verify(const unsigned char *, unsigned long, unsigned long, int, int, unsigned long *, const int *)"
+

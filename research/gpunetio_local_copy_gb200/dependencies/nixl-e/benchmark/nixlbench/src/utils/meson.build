@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+utils_sources = [
+  'neuron.cpp',
+  'neuron.h',
+  'utils.cpp',
+  'utils.h',
+  'scope_guard.h'
+]
+
+utils_deps = [
+  openmp_dep,
+  gflags_dep,
+  nixl_lib,
+  tomlplusplus_dep,
+  dependency('dl', required: true),
+]
+
+if raw_cli_available
+  utils_sources += ['raw_cli.cpp', 'raw_cli.h']
+  utils_deps += [cli11_dep]
+endif
+
+if cuda_available
+  utils_deps += [cuda_dep]
+elif rocm_available
+  utils_deps += [rocm_dep]
+endif
+
+utils_lib = static_library('utils',
+  utils_sources,
+  dependencies: utils_deps,
+  include_directories: inc_dir
+)
+utils_dep = declare_dependency(
+  link_with: utils_lib,
+  dependencies: utils_deps,
+  include_directories: inc_dir
+)

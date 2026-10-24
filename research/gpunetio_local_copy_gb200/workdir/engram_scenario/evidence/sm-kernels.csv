@@ -1,0 +1,11 @@
+Generating SQLite file /tmp/kernel-local-copy-engram-20261024/sm-overlap.sqlite from /tmp/kernel-local-copy-engram-20261024/sm-overlap.nsys-rep
+Processing [/tmp/kernel-local-copy-engram-20261024/sm-overlap.sqlite] with [/usr/local/cuda-13.0/NsightSystems-cli-2025.4.1/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+71.5,9472532,24,394688.8,394562.0,394274,396162,406.0,nvjet_tss_448x64_64x2_1x2_h_badd_coopB_NNN
+12.2,1617831,7,231118.7,169536.0,125472,645572,185324.0,"sm_copy(const unsigned char *, unsigned char *, const int *, int)"
+8.9,1181254,3,393751.3,393634.0,393602,394018,231.5,nvjet_tss_448x64_64x2_1x2_h_bz_coopB_NNN
+6.0,794468,7,113495.4,106656.0,105344,156513,18981.7,"validate(const unsigned char *, unsigned long, const int *, const float *, const float *, int, int, int, int, int, unsigned long long *)"
+1.0,128160,1,128160.0,128160.0,128160,128160,0.0,"init_weight(__nv_bfloat16 *, unsigned long)"
+0.3,44800,2,22400.0,22400.0,22016,22784,543.1,"expected_a(__nv_bfloat16 *, const int *, int, int, int)"
+0.0,1600,1,1600.0,1600.0,1600,1600,0.0,"consume(const __nv_bfloat16 *, float *, int)"
+

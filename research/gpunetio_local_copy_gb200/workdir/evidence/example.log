@@ -1,0 +1,1 @@
+PASS: one kernel issued GET, waited, and transformed 128 tensor elements

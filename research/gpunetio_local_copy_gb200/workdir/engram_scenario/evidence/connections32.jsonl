@@ -1,0 +1,27 @@
+{"kind":"source","layer":0,"address":"0x7fcd36000000","bytes":268435712}
+{"kind":"source","layer":1,"address":"0x7fcd24000000","bytes":268435712}
+{"kind":"batch_support","status":36,"message":"API call is not supported in the installed CUDA driver"}
+{"kind":"config","gpu":6,"nic":"mlx5_bond_3","tokens":512,"rows":12288,"rowbytes":512,"layers":2,"pool_rows":524288,"projection_n":8192,"seed":20261024,"registration_seconds":0.5187}
+{"kind":"compute_graph","layer":0,"gemms":0,"node_types":[0]}
+{"kind":"compute_graph","layer":0,"gemms":1,"node_types":[0]}
+{"kind":"compute_graph","layer":0,"gemms":4,"node_types":[0,0,0,0]}
+{"kind":"compute_graph","layer":1,"gemms":0,"node_types":[0]}
+{"kind":"compute_graph","layer":1,"gemms":1,"node_types":[0]}
+{"kind":"compute_graph","layer":1,"gemms":4,"node_types":[0,0,0,0]}
+{"kind":"graphs_ready","cases":2}
+{"kind":"negative_validation","source_row_shift":31,"detected_mismatches":4165033}
+{"kind":"result","block":0,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.624755,"copy0_ms":1.238067,"copy1_ms":1.200890,"compute0_ms":1.586464,"compute1_ms":1.584346,"wait0_ms":1.243725,"wait1_ms":1.206957,"copy1_start_ms":2.833024,"copy1_ready_ms":4.033914,"wall_ms":5.634214,"mismatch":0}
+{"kind":"result","block":0,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.906675,"copy0_ms":1.239821,"copy1_ms":1.352922,"compute0_ms":2.071405,"compute1_ms":1.583846,"wait0_ms":1.245504,"wait1_ms":0.002707,"copy1_start_ms":1.248550,"copy1_ready_ms":2.601472,"wall_ms":4.916431,"mismatch":0}
+{"kind":"result","block":1,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.896378,"copy0_ms":1.239437,"copy1_ms":1.353408,"compute0_ms":2.061139,"compute1_ms":1.584090,"wait0_ms":1.245165,"wait1_ms":0.002720,"copy1_start_ms":1.248096,"copy1_ready_ms":2.601504,"wall_ms":4.905692,"mismatch":0}
+{"kind":"result","block":1,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.642445,"copy0_ms":1.238048,"copy1_ms":1.218694,"compute0_ms":1.586707,"compute1_ms":1.584090,"wait0_ms":1.243699,"wait1_ms":1.224717,"copy1_start_ms":2.833171,"copy1_ready_ms":4.051866,"wall_ms":5.651893,"mismatch":0}
+{"kind":"result","block":2,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.651309,"copy0_ms":1.241562,"copy1_ms":1.223008,"compute0_ms":1.587533,"compute1_ms":1.584288,"wait0_ms":1.247232,"wait1_ms":1.229050,"copy1_start_ms":2.837619,"copy1_ready_ms":4.060627,"wall_ms":5.660657,"mismatch":0}
+{"kind":"result","block":2,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.893267,"copy0_ms":1.239904,"copy1_ms":1.352371,"compute0_ms":2.057510,"compute1_ms":1.584262,"wait0_ms":1.245587,"wait1_ms":0.002701,"copy1_start_ms":1.248538,"copy1_ready_ms":2.600909,"wall_ms":4.902597,"mismatch":0}
+{"kind":"result","block":3,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.900730,"copy0_ms":1.238931,"copy1_ms":1.367238,"compute0_ms":2.065894,"compute1_ms":1.584179,"wait0_ms":1.244736,"wait1_ms":0.002726,"copy1_start_ms":1.247757,"copy1_ready_ms":2.614995,"wall_ms":4.909976,"mismatch":0}
+{"kind":"result","block":3,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.648339,"copy0_ms":1.236301,"copy1_ms":1.225888,"compute0_ms":1.586944,"compute1_ms":1.584275,"wait0_ms":1.241926,"wait1_ms":1.231981,"copy1_start_ms":2.831750,"copy1_ready_ms":4.057638,"wall_ms":5.657429,"mismatch":0}
+{"kind":"result","block":4,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.655168,"copy0_ms":1.237837,"copy1_ms":1.232083,"compute0_ms":1.586227,"compute1_ms":1.584077,"wait0_ms":1.243539,"wait1_ms":1.238093,"copy1_start_ms":2.832570,"copy1_ready_ms":4.064653,"wall_ms":5.664380,"mismatch":0}
+{"kind":"result","block":4,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.900032,"copy0_ms":1.240909,"copy1_ms":1.362086,"compute0_ms":2.063597,"compute1_ms":1.583936,"wait0_ms":1.246502,"wait1_ms":0.002726,"copy1_start_ms":1.249594,"copy1_ready_ms":2.611680,"wall_ms":4.909444,"mismatch":0}
+{"kind":"result","block":5,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.914989,"copy0_ms":1.240333,"copy1_ms":1.366778,"compute0_ms":2.078419,"compute1_ms":1.584358,"wait0_ms":1.246317,"wait1_ms":0.002707,"copy1_start_ms":1.249325,"copy1_ready_ms":2.616102,"wall_ms":4.924452,"mismatch":0}
+{"kind":"result","block":5,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.622611,"copy0_ms":1.237926,"copy1_ms":1.199059,"compute0_ms":1.586906,"compute1_ms":1.583981,"wait0_ms":1.243507,"wait1_ms":1.205005,"copy1_start_ms":2.833146,"copy1_ready_ms":4.032205,"wall_ms":5.631649,"mismatch":0}
+{"kind":"result","block":6,"arm":"NIC_8","mode":"SERIAL","gemms":4,"qps_per_layer":8,"e2e_ms":5.627577,"copy0_ms":1.240819,"copy1_ms":1.201606,"compute0_ms":1.586093,"compute1_ms":1.584160,"wait0_ms":1.246438,"wait1_ms":1.207635,"copy1_start_ms":2.835296,"copy1_ready_ms":4.036902,"wall_ms":5.636705,"mismatch":0}
+{"kind":"result","block":6,"arm":"NIC_8","mode":"LOOKAHEAD","gemms":4,"qps_per_layer":8,"e2e_ms":4.903769,"copy0_ms":1.238221,"copy1_ms":1.358496,"compute0_ms":2.069498,"compute1_ms":1.584403,"wait0_ms":1.243968,"wait1_ms":0.002701,"copy1_start_ms":1.246886,"copy1_ready_ms":2.605382,"wall_ms":4.913610,"mismatch":0}
+{"kind":"complete","status":"PASS"}

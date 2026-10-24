@@ -1,0 +1,14 @@
+{
+  "nixl-e": {
+    "path": "nixl-byte-qp-20261022",
+    "sha": "e932593300366073dfd5f3333ef1d42f6abfbc0a",
+    "url": "https://github.com/ai-dynamo/nixl.git",
+    "note": "local E experiment snapshot; archive contains complete tracked source"
+  },
+  "nccl": {
+    "path": "nccl-gin-upstream",
+    "sha": "3e46c089f4ae4732722a419eb6096aead7e47a30",
+    "url": "https://github.com/NVIDIA/nccl.git",
+    "note": "NCCL2.32.3 with bundled GPUNetIO4.1.0"
+  }
+}

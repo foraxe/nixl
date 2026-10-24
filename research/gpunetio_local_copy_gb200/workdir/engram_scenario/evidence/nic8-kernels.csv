@@ -1,0 +1,12 @@
+Generating SQLite file /tmp/kernel-local-copy-engram-20261024/nic8-pipeline.sqlite from /tmp/kernel-local-copy-engram-20261024/nic8-pipeline.nsys-rep
+Processing [/tmp/kernel-local-copy-engram-20261024/nic8-pipeline.sqlite] with [/usr/local/cuda-13.0/NsightSystems-cli-2025.4.1/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+82.6,113092948,96,1178051.5,1170646.0,1064037,1362920,61496.6,"issue(local_copy::Copy *, const unsigned char *, unsigned char *, const int *, int, int, int, int *)"
+14.9,20378576,48,424553.7,394722.0,394114,785668,96285.8,nvjet_tss_448x64_64x2_1x2_h_badd_coopB_NNN
+1.0,1429480,13,109960.0,106304.0,105248,156705,14052.5,"validate(const unsigned char *, unsigned long, const int *, const float *, const float *, int, int, int, int, int, unsigned long long *)"
+0.9,1181350,3,393783.3,393698.0,393346,394306,485.7,nvjet_tss_448x64_64x2_1x2_h_bz_coopB_NNN
+0.5,646467,1,646467.0,646467.0,646467,646467,0.0,"sm_copy(const unsigned char *, unsigned char *, const int *, int)"
+0.1,127904,1,127904.0,127904.0,127904,127904,0.0,"init_weight(__nv_bfloat16 *, unsigned long)"
+0.0,44768,2,22384.0,22384.0,22080,22688,429.9,"expected_a(__nv_bfloat16 *, const int *, int, int, int)"
+0.0,1664,1,1664.0,1664.0,1664,1664,0.0,"consume(const __nv_bfloat16 *, float *, int)"
+

@@ -1,0 +1,12 @@
+{
+  "torch": "2.7.1+cu126",
+  "libraries": {
+    "/tmp/kernel-local-copy-20261023/src/liblocal_copy.so": "a328bc983ba5f92c9a482860f675a2e497845ecf9eae27d2961a4b570dc8c914",
+    "/tmp/kernel-local-copy-20261023/torch12/nvidia/cuda_runtime/lib/libcudart.so.12": "095296727cfb5f51e5b3ae69a3cb88cbd7b6592f314ace0fdfc4e1d758c2aa85",
+    "/tmp/nixl-byte-qp.final-20261022.i9GBzaT0/install/lib/x86_64-linux-gnu/plugins/libplugin_GPUNETIO.so": "0245b98e08fb8c3f3b7a40d427ec37de98984e4e65fce6fd5c78553b1f3f5b08",
+    "/tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libdoca_common.so.2": "ee29b74d444a9a0d42ef67e34d229b0885456f5942187de16c4145d3269a9adb",
+    "/tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libdoca_gpunetio.so.2": "69b969ddf7046cf306ddb85711b0f119ef1c3259c50c3df6715474a013743278",
+    "/tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libdoca_verbs.so.2": "eb06043dffc91cb1c74320a2d52ab3f1f1de165cb845a65421bae29d4310b6d6",
+    "/usr/lib/x86_64-linux-gnu/libcuda.so.550.127.08": "6b3896e61cca976fea1e2067100eda7f805e74ee63f8f0620be3f520e5e5f6fb"
+  }
+}

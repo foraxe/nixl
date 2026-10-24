@@ -1,0 +1,24 @@
+[
+  {
+    "run": "connections8.jsonl",
+    "serial_ms": 5.641485,
+    "lookahead_ms": 5.95415,
+    "paired_speedup": 0.9473620734139248,
+    "bootstrap95": [
+      0.946005307799127,
+      0.9496478331976745
+    ],
+    "favorable_blocks": 0
+  },
+  {
+    "run": "connections32.jsonl",
+    "serial_ms": 5.642445,
+    "lookahead_ms": 4.90073,
+    "paired_speedup": 1.1523712017331995,
+    "bootstrap95": [
+      1.146347577534685,
+      1.1541083813330197
+    ],
+    "favorable_blocks": 7
+  }
+]

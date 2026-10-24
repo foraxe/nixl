@@ -1,0 +1,49 @@
+{
+  "device": 6,
+  "nic": "mlx5_bond_3",
+  "cpu": "80-83",
+  "membind": 1,
+  "attributes": {
+    "SM_count": {
+      "status": 0,
+      "value": 78
+    },
+    "DMA_BUF_SUPPORTED": {
+      "status": 0,
+      "value": 0
+    }
+  },
+  "sha256": {
+    "scenario": "8bc0b58fdef7f71b80316c5fd7974f1e4575744341cd003ac772a4183223a6cf",
+    "scenario.cu": "5bc64e4803e66794daf86069b205953c04d7f8329a3d1d867bfbd890c3e9aa40",
+    "build.sh": "b0e907d7eb8110ef1b10c1ebb2ef171c79abbb8a859907143be8726532696447"
+  },
+  "ldd": "\tlinux-vdso.so.1 (0x00007fffc351a000)\n\t/lib/libsysconf-alipay.so (0x00007f8464c00000)\n\tliblocal_copy.so => /tmp/kernel-local-copy-challenge-20261023/warp/liblocal_copy.so (0x00007f8464b04000)\n\tlibcublas.so.12 => /tmp/kernel-local-copy-20261023/torch12/nvidia/cublas/lib/libcublas.so.12 (0x00007f845e000000)\n\tlibstdc++.so.6 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libstdc++.so.6 (0x00007f845dd82000)\n\tlibgcc_s.so.1 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libgcc_s.so.1 (0x00007f8464e1b000)\n\tlibc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6 (0x00007f845da00000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007f8464f13000)\n\tlibdl.so.2 => /usr/lib/x86_64-linux-gnu/libdl.so.2 (0x00007f8464e16000)\n\tlibplugin_GPUNETIO.so => /tmp/nixl-byte-qp.final-20261022.i9GBzaT0/install/lib/x86_64-linux-gnu/plugins/libplugin_GPUNETIO.so (0x00007f84649e9000)\n\tlibdoca_gpunetio.so.2 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libdoca_gpunetio.so.2 (0x00007f8464e03000)\n\tlibdoca_verbs.so.2 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libdoca_verbs.so.2 (0x00007f8464996000)\n\tlibdoca_common.so.2 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libdoca_common.so.2 (0x00007f845dc17000)\n\tlibibverbs.so.1 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libibverbs.so.1 (0x00007f8464971000)\n\tlibcuda.so.1 => /usr/lib/x86_64-linux-gnu/libcuda.so.1 (0x00007f845be00000)\n\tlibcublasLt.so.12 => /tmp/kernel-local-copy-20261023/torch12/nvidia/cublas/lib/libcublasLt.so.12 (0x00007f843a400000)\n\tlibrt.so.1 => /usr/lib/x86_64-linux-gnu/librt.so.1 (0x00007f846496a000)\n\tlibpthread.so.0 => /usr/lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f8464965000)\n\tlibm.so.6 => /usr/lib/x86_64-linux-gnu/libm.so.6 (0x00007f845bd17000)\n\tlibserdes.so => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libserdes.so (0x00007f845bc6f000)\n\tlibcudart.so.12 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libcudart.so.12 (0x00007f843a000000)\n\tlibmlx5.so.1 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libmlx5.so.1 (0x00007f843a374000)\n\tlibnl-3.so.200 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libnl-3.so.200 (0x00007f845d9de000)\n\tlibnl-route-3.so.200 => /tmp/nixl-qp-progress35.5d74SvlQ/move-runtime/lib/libnl-route-3.so.200 (0x00007f843a2e5000)\n",
+  "runs": {
+    "full": {
+      "seed": 20261024,
+      "blocks": 7,
+      "repeats": 5,
+      "connections": "default"
+    },
+    "seed2": {
+      "seed": 20261025,
+      "blocks": 7,
+      "repeats": 3,
+      "connections": 32,
+      "copy_connections": 8
+    },
+    "connection_control": {
+      "seed": 20261024,
+      "blocks": 7,
+      "repeats": 5,
+      "arm": "NIC_8",
+      "gemms": 4,
+      "connections": [
+        8,
+        32
+      ],
+      "copy_connections": 8
+    }
+  }
+}

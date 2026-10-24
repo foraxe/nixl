@@ -1,0 +1,10 @@
+child graph arm=CE_SERIAL G=1 layer=0: operation not supported
+{"kind":"source","layer":0,"address":"0x7f2dcec00000","bytes":4194560}
+{"kind":"source","layer":1,"address":"0x7f2dcf200000","bytes":4194560}
+{"kind":"config","gpu":6,"nic":"mlx5_bond_3","tokens":16,"rows":384,"rowbytes":512,"layers":2,"pool_rows":8192,"projection_n":256,"seed":20261024,"registration_seconds":0.2480}
+{"kind":"compute_graph","layer":0,"gemms":0,"node_types":[0]}
+{"kind":"compute_graph","layer":0,"gemms":1,"node_types":[10,0,0,11]}
+{"kind":"compute_graph","layer":0,"gemms":4,"node_types":[10,0,0,11,10,0,0,11,10,0,0,11,10,0,0,11]}
+{"kind":"compute_graph","layer":1,"gemms":0,"node_types":[0]}
+{"kind":"compute_graph","layer":1,"gemms":1,"node_types":[10,0,0,11]}
+{"kind":"compute_graph","layer":1,"gemms":4,"node_types":[10,0,0,11,10,0,0,11,10,0,0,11,10,0,0,11]}

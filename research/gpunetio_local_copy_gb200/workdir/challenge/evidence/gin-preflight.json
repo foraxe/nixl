@@ -1,0 +1,17 @@
+{
+  "gpu": 7,
+  "gpu_uuid": "REDACTED_UUID",
+  "cuInit": 0,
+  "attribute": 124,
+  "attribute_name": "CU_DEVICE_ATTRIBUTE_DMA_BUF_SUPPORTED",
+  "query_status": 0,
+  "value": 0,
+  "driver_api": 12040,
+  "driver_libraries": [
+    "/usr/lib/x86_64-linux-gnu/libcuda.so.550.127.08"
+  ],
+  "kernel": "5.10.134-16.3.al8.x86_64",
+  "nvidia_peermem": false,
+  "nv_peer_mem": true,
+  "verdict": "BLOCKED"
+}

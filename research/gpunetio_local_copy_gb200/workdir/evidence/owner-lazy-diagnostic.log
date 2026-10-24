@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/kernel-local-copy-20261023/src/test_copy.py", line 94, in <module>
+    run(parser.parse_args())
+  File "/tmp/kernel-local-copy-20261023/src/test_copy.py", line 71, in run
+    assert result.cpu().tolist()[:5] == [1, 1, 0, 0, -16], result.cpu().tolist()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: [1, 1, 0, 0, 0, 0, 3, 4, 3, 0, 0, 1, 0, 0, 0, 0]

@@ -1,0 +1,957 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "ucx_utils.h"
+
+#include <algorithm>
+#include <array>
+#include <cstring>
+#include <exception>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <nixl_types.h>
+
+#include "common/hw_info.h"
+#include "common/nixl_log.h"
+#include "config.h"
+#include "serdes/serdes.h"
+
+[[nodiscard]] nixl_b_params_t
+get_ucx_backend_common_options() {
+    nixl_b_params_t params = {{"ucx_devices", ""}, {"num_workers", "1"}};
+
+    params.emplace(nixl_ucx_err_handling_param_name,
+                   ucx_err_mode_to_string(UCP_ERR_HANDLING_MODE_PEER));
+    params.emplace(nixl_ucx_vram_memtype_hint_param_name,
+                   ucx_vram_memtype_hint_to_string(nixl_ucx_vram_memtype_hint_t::AUTO));
+    return params;
+}
+
+namespace {
+
+template<typename E> struct EnumName {
+    E value;
+    std::string_view name;
+};
+
+constexpr auto ucx_err_handling_mode_names = std::to_array<EnumName<ucp_err_handling_mode_t>>({
+    {UCP_ERR_HANDLING_MODE_NONE, "none"},
+    {UCP_ERR_HANDLING_MODE_PEER, "peer"},
+});
+
+constexpr auto ucx_vram_memtype_hint_names = std::to_array<EnumName<nixl_ucx_vram_memtype_hint_t>>({
+    {nixl_ucx_vram_memtype_hint_t::AUTO, "auto"},
+    {nixl_ucx_vram_memtype_hint_t::NONE, "none"},
+    {nixl_ucx_vram_memtype_hint_t::CUDA, "cuda"},
+    {nixl_ucx_vram_memtype_hint_t::CUDA_MANAGED, "cuda-managed"},
+    {nixl_ucx_vram_memtype_hint_t::ROCM, "rocm"},
+    {nixl_ucx_vram_memtype_hint_t::ZE_DEVICE, "ze-device"},
+});
+
+template<typename E, std::size_t N>
+[[nodiscard]] constexpr std::optional<E>
+enumFromString(const std::array<EnumName<E>, N> &table, std::string_view s) {
+    const auto it = std::ranges::find(table, s, &EnumName<E>::name);
+    return it != table.end() ? std::optional<E>(it->value) : std::nullopt;
+}
+
+template<typename E, std::size_t N>
+[[nodiscard]] constexpr std::optional<std::string_view>
+enumToString(const std::array<EnumName<E>, N> &table, E v) {
+    const auto it = std::ranges::find(table, v, &EnumName<E>::value);
+    return it != table.end() ? std::optional<std::string_view>(it->name) : std::nullopt;
+}
+
+// Formats the names in a table as "<a|b|c>" for error messages.
+template<typename E, std::size_t N>
+[[nodiscard]] std::string
+enumNames(const std::array<EnumName<E>, N> &table) {
+    std::string names = "<";
+    for (const auto &entry : table) {
+        if (names.size() > 1) {
+            names += '|';
+        }
+        names += entry.name;
+    }
+    return names + '>';
+}
+
+} // namespace
+
+[[nodiscard]] std::string_view
+ucx_err_mode_to_string(ucp_err_handling_mode_t t) {
+    if (const auto name = enumToString(ucx_err_handling_mode_names, t)) {
+        return *name;
+    }
+    throw std::invalid_argument(std::to_string(t));
+}
+
+[[nodiscard]] ucp_err_handling_mode_t
+ucx_err_mode_from_string(std::string_view s) {
+    if (const auto mode = enumFromString(ucx_err_handling_mode_names, s)) {
+        return *mode;
+    }
+    throw std::invalid_argument("Invalid error handling mode: " + std::string(s) +
+                                ". Valid values are: " + enumNames(ucx_err_handling_mode_names));
+}
+
+[[nodiscard]] std::string_view
+ucx_vram_memtype_hint_to_string(nixl_ucx_vram_memtype_hint_t t) {
+    if (const auto name = enumToString(ucx_vram_memtype_hint_names, t)) {
+        return *name;
+    }
+    throw std::invalid_argument(std::to_string(static_cast<int>(t)));
+}
+
+[[nodiscard]] nixl_ucx_vram_memtype_hint_t
+ucx_vram_memtype_hint_from_string(std::string_view s) {
+    if (const auto hint = enumFromString(ucx_vram_memtype_hint_names, s)) {
+        return *hint;
+    }
+    throw std::invalid_argument(
+        "Invalid VRAM memtype hint mode: " + std::string(s) +
+        ". Matching is case-sensitive; use exact values. Valid values are: " +
+        enumNames(ucx_vram_memtype_hint_names));
+}
+
+static void
+err_cb_wrapper(void *arg, ucp_ep_h ucp_ep, ucs_status_t status) {
+    auto ep = static_cast<nixlUcxEp *>(arg);
+    ep->err_cb(ucp_ep, status);
+}
+
+void
+nixlUcxEp::err_cb(ucp_ep_h ucp_ep, ucs_status_t status) {
+    const auto current_state = state_.load(std::memory_order_relaxed);
+
+    NIXL_DEBUG << "ep " << eph_ << ": state " << current_state
+               << ", UCX error handling callback was invoked with status " << status << " ("
+               << ucs_status_string(status) << ")";
+
+    NIXL_ASSERT(eph_ == ucp_ep);
+    state_ = nixl::ucx::ep_state_t::FAILED;
+}
+
+namespace {
+[[nodiscard]] ucs_status_ptr_t
+ucpEpClose(ucp_ep_h ep, uint32_t flags) {
+    const ucp_request_param_t req_param = {.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS, .flags = flags};
+    return ucp_ep_close_nbx(ep, &req_param);
+}
+} // namespace
+
+nixl_status_t
+nixlUcxEp::disconnect() {
+    const nixl::ucx::ep_state_t current_state = state_;
+
+    switch (current_state) {
+    case nixl::ucx::ep_state_t::FAILED: {
+        ucs_status_ptr_t request = ucpEpClose(eph_, UCP_EP_CLOSE_FLAG_FORCE);
+        if (UCS_PTR_IS_PTR(request)) {
+            ucp_request_free(request);
+        }
+        return NIXL_SUCCESS;
+    }
+    case nixl::ucx::ep_state_t::CONNECTED: {
+        ucs_status_ptr_t request = ucpEpClose(eph_, closeFlags_);
+        if (request == nullptr) {
+            return NIXL_SUCCESS;
+        }
+
+        if (UCS_PTR_IS_ERR(request)) {
+            const nixl_status_t status = nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+            // At step of disconnect we can ignore the remote disconnect error.
+            return (status == NIXL_ERR_REMOTE_DISCONNECT) ? NIXL_SUCCESS : status;
+        }
+
+        ucp_request_free(request);
+        return NIXL_SUCCESS;
+    }
+    }
+    NIXL_FATAL << "Invalid endpoint state: " << current_state;
+    std::terminate();
+}
+
+nixlUcxEp::nixlUcxEp(ucp_worker_h worker, void *addr, ucp_err_handling_mode_t err_handling_mode)
+    : closeFlags_(err_handling_mode == UCP_ERR_HANDLING_MODE_PEER ? UCP_EP_CLOSE_FLAG_FORCE : 0) {
+    ucp_ep_params_t ep_params;
+
+    ep_params.field_mask = UCP_EP_PARAM_FIELD_REMOTE_ADDRESS | UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
+    ep_params.err_mode = err_handling_mode;
+    if (err_handling_mode != UCP_ERR_HANDLING_MODE_NONE) {
+        ep_params.field_mask |= UCP_EP_PARAM_FIELD_ERR_HANDLER;
+        ep_params.err_handler.cb = err_cb_wrapper;
+        ep_params.err_handler.arg = static_cast<void *>(this);
+    }
+    ep_params.address = reinterpret_cast<ucp_address_t *>(addr);
+
+    const nixl_status_t status =
+        nixl::ucx::ucsToNixlStatus(ucp_ep_create(worker, &ep_params, &eph_));
+    if (status != NIXL_SUCCESS) {
+        throw std::runtime_error("failed to create ep");
+    }
+}
+
+nixlUcxEp::~nixlUcxEp() {
+    const nixl_status_t status = disconnect();
+    if (status) NIXL_ERROR << "Failed to disconnect ep with status " << status;
+}
+
+/* ===========================================
+ * Active message handling
+ * =========================================== */
+
+// Payload of an in-flight AM send and whether to release the request on completion
+using nixl_ucx_am_send_ctx_t = std::pair<std::string, bool>;
+
+void
+nixlUcxEp::sendAmCallback(void *request, ucs_status_t status, void *user_data) {
+    if (status != UCS_OK) {
+        NIXL_ERROR << "UCX AM send failed with status " << status << " ("
+                   << ucs_status_string(status) << ")";
+    }
+    const std::unique_ptr<nixl_ucx_am_send_ctx_t> ctx(
+        static_cast<nixl_ucx_am_send_ctx_t *>(user_data));
+    if (ctx->second) {
+        ucp_request_free(request);
+    }
+}
+
+nixl_status_t
+nixlUcxEp::sendAm(nixl::ucx::am_cb_op_t msg_id,
+                  std::string &&payload,
+                  uint32_t flags,
+                  nixlUcxReq *req) const {
+    const nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) {
+        // The endpoint is already in a failed state (e.g. the peer disconnected),
+        // so no request will be issued.
+        return status;
+    }
+
+    auto ctx = std::make_unique<nixl_ucx_am_send_ctx_t>(std::move(payload), req == nullptr);
+
+    ucp_request_param_t param;
+    param.op_attr_mask = UCP_OP_ATTR_FIELD_FLAGS | UCP_OP_ATTR_FIELD_MEMORY_TYPE |
+        UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+    param.flags = flags;
+    param.memory_type = UCS_MEMORY_TYPE_HOST;
+    param.cb.send = sendAmCallback;
+    param.user_data = ctx.get();
+
+    const ucs_status_ptr_t request = ucp_am_send_nbx(
+        eph_, unsigned(msg_id), nullptr, 0, ctx->first.data(), ctx->first.size(), &param);
+    if (UCS_PTR_IS_PTR(request)) {
+        ctx.release();
+        if (req != nullptr) {
+            *req = static_cast<nixlUcxReq>(request);
+        }
+        return NIXL_IN_PROG;
+    }
+
+    return nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+}
+
+/* ===========================================
+ * Data transfer
+ * =========================================== */
+
+nixl_status_t
+nixlUcxEp::read(uint64_t raddr,
+                const nixl::ucx::rkey &rkey,
+                void *laddr,
+                nixlUcxMem &mem,
+                size_t size,
+                nixlUcxReq &req) {
+    nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) [[unlikely]] {
+        return status;
+    }
+
+    ucp_request_param_t param;
+    param.op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FLAG_MULTI_SEND;
+    param.memh = mem.memh;
+
+    const ucs_status_ptr_t request = ucp_get_nbx(eph_, laddr, size, raddr, rkey.get(), &param);
+    if (UCS_PTR_IS_PTR(request)) {
+        req = static_cast<nixlUcxReq>(request);
+        return NIXL_IN_PROG;
+    }
+
+    return nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+}
+
+nixl_status_t
+nixlUcxEp::write(void *laddr,
+                 const nixlUcxMem &mem,
+                 uint64_t raddr,
+                 const nixl::ucx::rkey &rkey,
+                 size_t size,
+                 nixlUcxReq &req) {
+    nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) [[unlikely]] {
+        return status;
+    }
+
+    ucp_request_param_t param;
+    param.op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FLAG_MULTI_SEND;
+    param.memh = mem.memh;
+
+    const ucs_status_ptr_t request = ucp_put_nbx(eph_, laddr, size, raddr, rkey.get(), &param);
+    if (UCS_PTR_IS_PTR(request)) {
+        req = static_cast<nixlUcxReq>(request);
+        return NIXL_IN_PROG;
+    }
+
+    return nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+}
+
+nixl_status_t
+nixlUcxEp::atomicAdd(uint64_t value,
+                     uint64_t raddr,
+                     const nixl::ucx::rkey &rkey,
+                     nixlUcxReq &req) const {
+    nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) {
+        return status;
+    }
+
+    ucp_request_param_t param = {
+        .op_attr_mask = UCP_OP_ATTR_FIELD_DATATYPE,
+        .datatype = ucp_dt_make_contig(sizeof(uint64_t)),
+    };
+
+    const ucs_status_ptr_t request =
+        ucp_atomic_op_nbx(eph_, UCP_ATOMIC_OP_ADD, &value, 1, raddr, rkey.get(), &param);
+    if (UCS_PTR_IS_PTR(request)) {
+        req = static_cast<nixlUcxReq>(request);
+        return NIXL_IN_PROG;
+    }
+
+    return nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+}
+
+nixl_status_t
+nixlUcxEp::estimateCost(size_t size,
+                        std::chrono::microseconds &duration,
+                        std::chrono::microseconds &err_margin,
+                        nixl_cost_t &method) {
+    ucp_ep_evaluate_perf_param_t params = {
+        .field_mask = UCP_EP_PERF_PARAM_FIELD_MESSAGE_SIZE,
+        .message_size = size,
+    };
+
+    ucp_ep_evaluate_perf_attr_t cost_result = {
+        .field_mask = UCP_EP_PERF_ATTR_FIELD_ESTIMATED_TIME,
+    };
+
+    ucs_status_t status = ucp_ep_evaluate_perf(this->eph_, &params, &cost_result);
+    if (status != UCS_OK) {
+        NIXL_ERROR << "ucp_ep_evaluate_perf failed: " << ucs_status_string(status);
+        return NIXL_ERR_BACKEND;
+    }
+
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::duration<double>(cost_result.estimated_time));
+    method = nixl_cost_t::ANALYTICAL_BACKEND;
+    // Currently, we do not have a way to estimate the error margin
+    err_margin = std::chrono::microseconds(0);
+    return NIXL_SUCCESS;
+}
+
+nixl_status_t
+nixlUcxEp::flushEp(nixlUcxReq &req) const noexcept {
+    ucp_request_param_t param;
+    ucs_status_ptr_t request;
+
+    param.op_attr_mask = 0;
+    request = ucp_ep_flush_nbx(eph_, &param);
+
+    if (UCS_PTR_IS_PTR(request)) {
+        req = static_cast<nixlUcxReq>(request);
+        return NIXL_IN_PROG;
+    }
+
+    return nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+}
+
+#ifdef HAVE_UCX_SGL_API
+nixl_status_t
+nixlUcxEp::postSgl(const ucp_dt_local_sgl_t &local,
+                   const ucp_dt_remote_sgl_t &remote,
+                   size_t count,
+                   nixlUcxReq &req) {
+    const nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) {
+        return status;
+    }
+
+    const ucp_request_param_t param = {
+        .op_attr_mask = UCP_OP_ATTR_FIELD_DATATYPE | UCP_OP_ATTR_FIELD_REMOTE_DATATYPE |
+            UCP_OP_ATTR_FIELD_REMOTE | UCP_OP_ATTR_FIELD_REMOTE_COUNT,
+        .datatype = ucp_dt_make_sgl(),
+        .remote_datatype = ucp_dt_make_sgl(),
+        .remote = &remote,
+        .remote_count = count,
+    };
+
+    const ucs_status_ptr_t request =
+        ucp_put_nbx(eph_, &local, count, UCP_REMOTE_ADDR_INVALID, UCP_RKEY_INVALID, &param);
+    if (UCS_PTR_IS_PTR(request)) {
+        req = static_cast<nixlUcxReq>(request);
+        return NIXL_IN_PROG;
+    }
+
+    req = nullptr;
+    return nixl::ucx::ucsToNixlStatus(UCS_PTR_STATUS(request));
+}
+#endif
+
+bool
+nixlUcxMtLevelIsSupported(const nixl::ucx::mt_mode_t mt_type) noexcept {
+    ucp_lib_attr_t attr;
+    attr.field_mask = UCP_LIB_ATTR_FIELD_MAX_THREAD_LEVEL;
+    ucp_lib_query(&attr);
+
+    switch (mt_type) {
+    case nixl::ucx::mt_mode_t::SINGLE:
+        return attr.max_thread_level >= UCS_THREAD_MODE_SERIALIZED;
+    case nixl::ucx::mt_mode_t::CONTEXT:
+    case nixl::ucx::mt_mode_t::WORKER:
+        return attr.max_thread_level >= UCS_THREAD_MODE_MULTI;
+    }
+    NIXL_FATAL << "invalid mt type: " << toInteger(mt_type);
+    std::terminate();
+}
+
+namespace {
+
+[[nodiscard]] unsigned
+makeUcpVersion() noexcept {
+    unsigned major_version, minor_version, release_number;
+    ucp_get_version(&major_version, &minor_version, &release_number);
+    const unsigned version = UCP_VERSION(major_version, minor_version);
+
+    if (version < UCP_VERSION(1, 19)) {
+        NIXL_WARN << "UCX version is " << major_version << '.' << minor_version << '.'
+                  << release_number
+                  << " which is less than 1.19, CUDA support is limited, including"
+                  << " the lack of support for multi-GPU within a single process.";
+    }
+
+    return version;
+}
+
+[[nodiscard]] nixl::ucx::mt_mode_t
+makeMtType(const bool prog_thread, const nixl_thread_sync_t sync_mode) noexcept {
+    // With strict synchronization model nixlAgent serializes access to backends, with more
+    // permissive models backends need to account for concurrent access and ensure their internal
+    // state is properly protected. Progress thread creates internal concurrency in UCX backend
+    // irrespective of nixlAgent synchronization model.
+    return (sync_mode == nixl_thread_sync_t::NIXL_THREAD_SYNC_RW || prog_thread) ?
+        nixl::ucx::mt_mode_t::WORKER :
+        nixl::ucx::mt_mode_t::SINGLE;
+}
+
+[[nodiscard]] std::string_view
+ucx_memory_type_to_string(const ucs_memory_type_t mem_type) {
+    const auto mem_type_index = static_cast<unsigned>(mem_type);
+    if (mem_type_index >= static_cast<unsigned>(UCS_MEMORY_TYPE_LAST)) {
+        return "invalid";
+    }
+
+    return ucs_memory_type_names[mem_type_index];
+}
+
+[[nodiscard]] ucs_memory_type_t
+ucx_auto_detect_vram_hint(const uint64_t memory_types_mask) {
+    // AUTO is intentionally conservative: only auto-hint ZE on ZE-only accelerator stacks.
+    // CUDA is left to UCX auto-detection by default because it is reliable with shared
+    // primary context, and mixed accelerator environments are treated as ambiguous.
+    const bool has_ze = UCS_BIT_GET(memory_types_mask, UCS_MEMORY_TYPE_ZE_DEVICE);
+    const bool has_cuda = UCS_BIT_GET(memory_types_mask, UCS_MEMORY_TYPE_CUDA) ||
+        UCS_BIT_GET(memory_types_mask, UCS_MEMORY_TYPE_CUDA_MANAGED);
+    const bool has_rocm = UCS_BIT_GET(memory_types_mask, UCS_MEMORY_TYPE_ROCM);
+
+    if (has_ze && !has_cuda && !has_rocm) {
+        return UCS_MEMORY_TYPE_ZE_DEVICE;
+    }
+
+    return UCS_MEMORY_TYPE_UNKNOWN;
+}
+
+[[nodiscard]] ucs_memory_type_t
+ucx_policy_to_mem_type(const nixl_ucx_vram_memtype_hint_t policy) {
+    switch (policy) {
+    case nixl_ucx_vram_memtype_hint_t::AUTO:
+    case nixl_ucx_vram_memtype_hint_t::NONE:
+        return UCS_MEMORY_TYPE_UNKNOWN;
+    case nixl_ucx_vram_memtype_hint_t::CUDA:
+        return UCS_MEMORY_TYPE_CUDA;
+    case nixl_ucx_vram_memtype_hint_t::CUDA_MANAGED:
+        return UCS_MEMORY_TYPE_CUDA_MANAGED;
+    case nixl_ucx_vram_memtype_hint_t::ROCM:
+        return UCS_MEMORY_TYPE_ROCM;
+    case nixl_ucx_vram_memtype_hint_t::ZE_DEVICE:
+        return UCS_MEMORY_TYPE_ZE_DEVICE;
+    }
+
+    NIXL_FATAL << "Invalid VRAM memtype hint mode: " << static_cast<int>(policy);
+    std::terminate();
+}
+
+} // namespace
+
+nixlUcxContext::nixlUcxContext(const std::vector<std::string> &devs,
+                               bool prog_thread,
+                               unsigned long num_workers,
+                               nixl_thread_sync_t sync_mode,
+                               size_t num_device_channels,
+                               const std::string &engine_config,
+                               const std::string &name,
+                               nixl_ucx_vram_memtype_hint_t vram_mem_type_hint_policy)
+    : mtType_(makeMtType(prog_thread, sync_mode)),
+      ucpVersion_(makeUcpVersion()),
+      name_(name),
+      vramMemTypeHintPolicy_(vram_mem_type_hint_policy) {
+
+    ucp_params_t ucp_params;
+    ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED;
+    ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64 | UCP_FEATURE_AM;
+
+    if (!name_.empty()) {
+        ucp_params.field_mask |= UCP_PARAM_FIELD_NAME;
+        ucp_params.name = name_.c_str();
+    }
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    ucp_params.features |= UCP_FEATURE_DEVICE;
+#endif
+
+    if (prog_thread) ucp_params.features |= UCP_FEATURE_WAKEUP;
+    ucp_params.mt_workers_shared = num_workers > 1 ? 1 : 0;
+
+    nixl::ucx::config config;
+
+    /* If requested, restrict the set of network devices */
+    if (devs.size()) {
+        /* TODO: check if this is the best way */
+        std::string devs_str;
+        for (const auto &dev : devs) {
+            devs_str += dev + ":1,";
+        }
+        devs_str.pop_back(); // to remove odd comma after the last device
+        config.modifyAlways("NET_DEVICES", devs_str.c_str());
+    }
+
+    config.modify("RNDV_THRESH", "inf");
+    config.modify("MAX_RMA_RAILS", "2");
+    config.modify("IB_PCI_RELAXED_ORDERING", "try");
+    config.modify("CUDA_IPC_ENABLE_GET_ZCOPY", "on");
+
+    // rocm_ipc reports a 128-byte minimum zero-copy size by default, and UCP's
+    // put/get zero-copy protocols only accept lanes whose minimum is 0. Without
+    // this, GPU-to-GPU RMA on AMD never uses rocm_ipc (XGMI) and is staged
+    // through host memory instead.
+    config.modify("ROCM_IPC_MIN_ZCOPY", "0");
+
+    // NIXL only needs AMs to be visible after previous PUTs which RC already
+    // provides without the need of strict order key.
+    config.modify("RC_FENCE", "none");
+
+    if (ucpVersion_ >= UCP_VERSION(1, 21)) {
+        config.modify("RC_GDA_NUM_CHANNELS", std::to_string(num_device_channels));
+        config.modify("MAX_HCA_PER_GPU", "auto");
+    }
+
+    if (ucpVersion_ >= UCP_VERSION(1, 22)) {
+        config.modify("RNDV_PIPELINE_ERROR_HANDLING", "y");
+    }
+
+    if (ucpVersion_ >= UCP_VERSION(1, 23)) {
+        config.modify("IB_AH_CACHE_TTL", "0");
+    }
+
+    const auto &hw_info = nixl::hwInfo::instance();
+    if (hw_info.numEfaDevices != 0) {
+        config.modify("ADDRESS_VERSION", "v2");
+        if (ucpVersion_ >= UCP_VERSION(1, 19)) {
+            config.modify("MAX_COMPONENT_MDS", "32");
+        }
+    }
+
+    std::string elem;
+    std::stringstream stream(engine_config);
+
+    while (std::getline(stream, elem, ',')) {
+        std::string_view elem_view = elem;
+        size_t pos = elem_view.find('=');
+
+        if (pos != std::string::npos) {
+            config.modify(elem_view.substr(0, pos), elem_view.substr(pos + 1));
+        }
+    }
+
+    config.validateTlsCudaSupport();
+
+    ucp_context_h new_ctx = nullptr;
+    const auto status = ucp_init(&ucp_params, config.getUcpConfig(), &new_ctx);
+    if (status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to create UCX context ") + name_ + ": " +
+                                 std::string(ucs_status_string(status)));
+    }
+
+    ctx.reset(new_ctx);
+    resolveMemoryTypeConfig();
+}
+
+std::ostream &
+operator<<(std::ostream &os, const nixlUcxContext &ctx) {
+    return os << "nixlUcxContext " << ctx.getName();
+}
+
+bool
+nixlUcxContext::supportsMemoryType(ucs_memory_type_t mem_type) const {
+    ucp_context_attr_t attr = {
+        .field_mask = UCP_ATTR_FIELD_MEMORY_TYPES,
+    };
+    const auto status = ucp_context_query(ctx.get(), &attr);
+    if (status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to query UCX context ") + name_ + ": " +
+                                 std::string(ucs_status_string(status)));
+    }
+
+    return UCS_BIT_GET(attr.memory_types, mem_type) != 0;
+}
+
+void
+nixlUcxContext::resolveMemoryTypeConfig() {
+    ucp_context_attr_t context_attr = {
+        .field_mask = UCP_ATTR_FIELD_MEMORY_TYPES,
+    };
+
+    const auto status = ucp_context_query(ctx.get(), &context_attr);
+    NIXL_ASSERT_ALWAYS(status == UCS_OK)
+        << "Failed to query UCX context memory types: " << ucs_status_string(status);
+
+    supportedMemoryTypesMask_ = context_attr.memory_types;
+
+    if (vramMemTypeHintPolicy_ == nixl_ucx_vram_memtype_hint_t::AUTO) {
+        vramMemTypeHint_ = ucx_auto_detect_vram_hint(supportedMemoryTypesMask_);
+        if (vramMemTypeHint_ != UCS_MEMORY_TYPE_UNKNOWN) {
+            NIXL_INFO << "VRAM memtype hint mode is auto, selected "
+                      << ucx_memory_type_to_string(vramMemTypeHint_) << " based on UCX context";
+        } else {
+            NIXL_DEBUG << "VRAM memtype hint mode is auto, no unambiguous accelerator memory type"
+                          " found; UCX auto-detection will be used";
+        }
+        return;
+    }
+
+    if (vramMemTypeHintPolicy_ == nixl_ucx_vram_memtype_hint_t::NONE) {
+        NIXL_DEBUG << "VRAM memtype hint mode is none, UCX auto-detection will be used";
+        return;
+    }
+
+    const auto configured_hint = ucx_policy_to_mem_type(vramMemTypeHintPolicy_);
+    NIXL_ASSERT(configured_hint != UCS_MEMORY_TYPE_UNKNOWN);
+
+    if (!UCS_BIT_GET(supportedMemoryTypesMask_, configured_hint)) {
+        throw std::invalid_argument(
+            "Configured VRAM memtype hint '" +
+            std::string(ucx_vram_memtype_hint_to_string(vramMemTypeHintPolicy_)) +
+            "' is not supported by current UCX context");
+    }
+
+    vramMemTypeHint_ = configured_hint;
+    NIXL_INFO << "VRAM memtype hint mode is "
+              << ucx_vram_memtype_hint_to_string(vramMemTypeHintPolicy_) << ", using "
+              << ucx_memory_type_to_string(vramMemTypeHint_);
+}
+
+namespace {
+[[nodiscard]] ucs_thread_mode_t
+toUcsThreadModeChecked(const nixl::ucx::mt_mode_t t) {
+    switch (t) {
+    case nixl::ucx::mt_mode_t::CONTEXT:
+        return UCS_THREAD_MODE_SINGLE;
+    case nixl::ucx::mt_mode_t::SINGLE:
+        return UCS_THREAD_MODE_SERIALIZED;
+    case nixl::ucx::mt_mode_t::WORKER:
+        return UCS_THREAD_MODE_MULTI;
+    }
+    NIXL_FATAL << "Invalid UCX worker type: "
+               << static_cast<std::underlying_type_t<nixl::ucx::mt_mode_t>>(t);
+    std::terminate();
+}
+
+struct nixlUcpWorkerParams : ucp_worker_params_t {
+    nixlUcpWorkerParams(const nixl::ucx::mt_mode_t t, const std::string &worker_name) {
+        field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE | UCP_WORKER_PARAM_FIELD_NAME;
+        thread_mode = toUcsThreadModeChecked(t);
+        name = worker_name.c_str();
+    }
+};
+
+static_assert(sizeof(nixlUcpWorkerParams) == sizeof(ucp_worker_params_t));
+
+} // namespace
+
+ucp_worker *
+nixlUcxWorker::createUcpWorker(const nixlUcxContext &ctx) const {
+    ucp_worker *worker = nullptr;
+    const nixlUcpWorkerParams params(ctx.mtType_, name_);
+    const ucs_status_t status = ucp_worker_create(ctx.ctx.get(), &params, &worker);
+    if (status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to create UCX worker ") + name_ + ": " +
+                                 ucs_status_string(status));
+    }
+
+    return worker;
+}
+
+std::ostream &
+operator<<(std::ostream &os, const nixlUcxWorker &worker) {
+    return os << "nixlUcxWorker " << worker.getName();
+}
+
+nixlUcxWorker::nixlUcxWorker(const nixlUcxContext &ctx,
+                             ucp_err_handling_mode_t err_handling_mode,
+                             size_t id)
+    : name_(ctx.getName() + ":" + std::to_string(id)),
+      worker(createUcpWorker(ctx), &ucp_worker_destroy),
+      err_handling_mode_(err_handling_mode),
+      id_(id) {
+    NIXL_DEBUG << *this << ": created ucp worker " << worker.get();
+}
+
+std::string
+nixlUcxWorker::epAddr() {
+    ucp_worker_attr_t wattr;
+
+    wattr.field_mask = UCP_WORKER_ATTR_FIELD_ADDRESS;
+    const ucs_status_t status = ucp_worker_query(worker.get(), &wattr);
+    if (UCS_OK != status) {
+        throw std::runtime_error(std::string("Unable to query address of UCX worker ") + name_ +
+                                 ": " + ucs_status_string(status));
+    }
+
+    const std::string result = nixlSerDes::_bytesToString(wattr.address, wattr.address_length);
+    ucp_worker_release_address(worker.get(), wattr.address);
+    return result;
+}
+
+std::unique_ptr<nixlUcxEp>
+nixlUcxWorker::connect(void *addr) {
+    try {
+        auto ep = std::make_unique<nixlUcxEp>(worker.get(), addr, err_handling_mode_);
+        NIXL_DEBUG << *this << ": created ep " << ep->getEp();
+        return ep;
+    }
+    catch (const std::exception &e) {
+        NIXL_ERROR << *this << ": UCX endpoint create failed: " << e.what();
+        return {};
+    }
+}
+
+/* ===========================================
+ * Memory management
+ * =========================================== */
+
+
+int
+nixlUcxContext::memReg(void *addr, size_t size, nixlUcxMem &mem, nixl_mem_t nixl_mem_type) {
+    mem.base = addr;
+    mem.size = size;
+
+    ucp_mem_map_params_t mem_params = {
+        .field_mask = UCP_MEM_MAP_PARAM_FIELD_FLAGS | UCP_MEM_MAP_PARAM_FIELD_LENGTH |
+            UCP_MEM_MAP_PARAM_FIELD_ADDRESS,
+        .address = mem.base,
+        .length = mem.size,
+    };
+
+    if (nixl_mem_type == nixl_mem_t::VRAM_SEG && vramMemTypeHint_ != UCS_MEMORY_TYPE_UNKNOWN) {
+        mem_params.field_mask |= UCP_MEM_MAP_PARAM_FIELD_MEMORY_TYPE;
+        mem_params.memory_type = vramMemTypeHint_;
+        NIXL_DEBUG << "memReg: hinting " << ucx_memory_type_to_string(mem_params.memory_type)
+                   << " for VRAM_SEG";
+    }
+
+    ucs_status_t status = ucp_mem_map(ctx.get(), &mem_params, &mem.memh);
+    if (status != UCS_OK) {
+        NIXL_ERROR << *this << ": failed to ucp_mem_map: " << ucs_status_string(status);
+        return -1;
+    }
+
+    if (nixl_mem_type == nixl_mem_t::VRAM_SEG) {
+        ucp_mem_attr_t attr;
+        attr.field_mask = UCP_MEM_ATTR_FIELD_MEM_TYPE;
+        status = ucp_mem_query(mem.memh, &attr);
+        if (status != UCS_OK) {
+            NIXL_ERROR << *this << ": failed to ucp_mem_query: " << ucs_status_string(status);
+            ucp_mem_unmap(ctx.get(), mem.memh);
+            return -1;
+        }
+
+        if (attr.mem_type == UCS_MEMORY_TYPE_HOST) {
+            NIXL_ERROR << *this
+                       << ": VRAM memory is detected as host by UCX. "
+                          "UCX memory type detection/configuration is likely mismatched. "
+                          "VRAM registration cannot proceed.";
+            ucp_mem_unmap(ctx.get(), mem.memh);
+            return -1;
+        }
+    }
+
+    NIXL_DEBUG << *this << ": registered " << mem.size << " bytes at " << mem.base << ", memh "
+               << mem.memh;
+    return 0;
+}
+
+std::string
+nixlUcxContext::packRkey(nixlUcxMem &mem) {
+    void *rkey_buf;
+    std::size_t size;
+
+    const ucs_status_t status = ucp_rkey_pack(ctx.get(), mem.memh, &rkey_buf, &size);
+    if (status != UCS_OK) {
+        NIXL_ERROR << *this << ": failed to ucp_rkey_pack: " << ucs_status_string(status);
+        return {};
+    }
+    const std::string result = nixlSerDes::_bytesToString(rkey_buf, size);
+    ucp_rkey_buffer_release(rkey_buf);
+    NIXL_DEBUG << *this << ": packed rkey of " << size << " bytes for memh " << mem.memh;
+    return result;
+}
+
+void
+nixlUcxContext::memDereg(nixlUcxMem &mem) {
+    NIXL_DEBUG << *this << ": deregistering " << mem.size << " bytes at " << mem.base << ", memh "
+               << mem.memh;
+    ucp_mem_unmap(ctx.get(), mem.memh);
+}
+
+void
+nixlUcxContext::warnAboutHardwareSupportMismatch() const {
+    const bool cuda_supported = supportsMemoryType(UCS_MEMORY_TYPE_CUDA);
+
+    const auto &hw_info = nixl::hwInfo::instance();
+
+    if (hw_info.numNvidiaGpus > 0 && !cuda_supported) {
+        NIXL_WARN << *this << ": " << hw_info.numNvidiaGpus
+                  << " NVIDIA GPU(s) were detected, but UCX CUDA support was not found! "
+                  << "GPU memory is not supported.";
+    }
+
+    if (hw_info.numAmdGpus > 0 && !supportsMemoryType(UCS_MEMORY_TYPE_ROCM)) {
+        NIXL_WARN << *this << ": " << hw_info.numAmdGpus
+                  << " AMD GPU(s) were detected, but UCX ROCm support was not found! "
+                  << "GPU memory is not supported.";
+    }
+
+    if (ucpVersion_ >= ucp_version_mem_type_rdma) {
+        const bool rdma_supported = supportsMemoryType(UCS_MEMORY_TYPE_RDMA);
+
+        if (hw_info.numIbDevices > 0 && !rdma_supported) {
+            NIXL_WARN << *this << ": " << hw_info.numIbDevices
+                      << " IB device(s) were detected, but accelerated IB support was not found! "
+                         "Performance may be degraded.";
+        }
+    }
+}
+
+/* ===========================================
+ * Active message handling
+ * =========================================== */
+
+int
+nixlUcxWorker::regAmCallback(nixl::ucx::am_cb_op_t msg_id, ucp_am_recv_callback_t cb, void *arg) {
+    ucp_am_handler_param_t params = {0};
+
+    params.field_mask = UCP_AM_HANDLER_PARAM_FIELD_ID | UCP_AM_HANDLER_PARAM_FIELD_CB |
+        UCP_AM_HANDLER_PARAM_FIELD_ARG;
+
+    params.id = unsigned(msg_id);
+    params.cb = cb;
+    params.arg = arg;
+
+    const ucs_status_t status = ucp_worker_set_am_recv_handler(worker.get(), &params);
+
+    if (status != UCS_OK) {
+        // TODO: error handling
+        return -1;
+    }
+
+    NIXL_DEBUG << *this << ": registered AM callback for " << msg_id;
+    return 0;
+}
+
+/* ===========================================
+ * Data transfer
+ * =========================================== */
+
+unsigned
+nixlUcxWorker::progress() {
+    return ucp_worker_progress(worker.get());
+}
+
+void
+nixlUcxWorker::progressLoop() {
+    while (progress() != 0)
+        ;
+}
+
+nixl_status_t
+nixlUcxWorker::test(nixlUcxReq req) {
+    if (req == nullptr) {
+        return NIXL_SUCCESS;
+    }
+    ucp_worker_progress(worker.get());
+    return nixl::ucx::ucsToNixlStatus(ucp_request_check_status(req));
+}
+
+void
+nixlUcxWorker::reqRelease(nixlUcxReq req) {
+    ucp_request_free(req);
+}
+
+void
+nixlUcxWorker::reqCancel(nixlUcxReq req) {
+    NIXL_DEBUG << *this << ": cancelling request " << req;
+    ucp_request_cancel(worker.get(), req);
+}
+
+nixl_status_t
+nixlUcxWorker::arm() const noexcept {
+    return nixl::ucx::ucsToNixlStatus(ucp_worker_arm(worker.get()));
+}
+
+int
+nixlUcxWorker::getEfd() const {
+    int fd;
+    const auto status = ucp_worker_get_efd(worker.get(), &fd);
+    if (status != UCS_OK) {
+        const auto err_str = std::string("Couldn't obtain fd for UCX worker ") + name_ + ": " +
+            ucs_status_string(status);
+        NIXL_ERROR << err_str;
+        throw std::runtime_error(err_str);
+    }
+    return fd;
+}

@@ -1,0 +1,314 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#ifndef NIXL_SRC_UTILS_UCX_UCX_UTILS_H
+#define NIXL_SRC_UTILS_UCX_UCX_UTILS_H
+
+#include <atomic>
+#include <memory>
+#include <string_view>
+#include <type_traits>
+
+extern "C" {
+#include <ucp/api/ucp.h>
+}
+
+#include <nixl_types.h>
+
+#include "rkey.h"
+#include "ucx_enums.h"
+
+enum class nixl_ucx_vram_memtype_hint_t {
+    AUTO,
+    NONE,
+    CUDA,
+    CUDA_MANAGED,
+    ROCM,
+    ZE_DEVICE,
+};
+
+inline constexpr std::string_view nixl_ucx_err_handling_param_name = "ucx_error_handling_mode";
+inline constexpr std::string_view nixl_ucx_vram_memtype_hint_param_name = "ucx_vram_memtype_hint";
+
+// The API `ucp_context_query(ctx, &attr)` sets `UCS_MEMORY_TYPE_RDMA` in `attr.memory_types`
+// field only from UCX 1.22
+inline constexpr unsigned ucp_version_mem_type_rdma = UCP_VERSION(1, 22);
+
+using nixlUcxReq = void *;
+
+class nixlUcxMem;
+
+class nixlUcxEp {
+private:
+    ucp_ep_h eph_{nullptr};
+    std::atomic<nixl::ucx::ep_state_t> state_{nixl::ucx::ep_state_t::CONNECTED};
+    const uint32_t closeFlags_;
+
+    nixl_status_t
+    disconnect();
+
+    static void
+    sendAmCallback(void *request, ucs_status_t status, void *user_data);
+
+public:
+    void
+    err_cb(ucp_ep_h ucp_ep, ucs_status_t status);
+
+    [[nodiscard]] nixl_status_t
+    checkTxState() const noexcept {
+        return nixl::ucx::toNixlStatus(state_);
+    }
+
+    nixlUcxEp(ucp_worker_h worker, void *addr, ucp_err_handling_mode_t err_handling_mode);
+    ~nixlUcxEp();
+    nixlUcxEp(const nixlUcxEp &) = delete;
+    nixlUcxEp &
+    operator=(const nixlUcxEp &) = delete;
+
+    /**
+     * @brief Send an active message that owns its payload
+     * @param payload Data released once the send completes
+     * @param req Receives the UCX request of an in-progress send; if null, the request is
+     *            released on completion
+     */
+    nixl_status_t
+    sendAm(nixl::ucx::am_cb_op_t msg_id,
+           std::string &&payload,
+           uint32_t flags,
+           nixlUcxReq *req = nullptr) const;
+
+    /* Data access */
+    [[nodiscard]] nixl_status_t
+    read(uint64_t raddr,
+         const nixl::ucx::rkey &rkey,
+         void *laddr,
+         nixlUcxMem &mem,
+         size_t size,
+         nixlUcxReq &req);
+    [[nodiscard]] nixl_status_t
+    write(void *laddr,
+          const nixlUcxMem &mem,
+          uint64_t raddr,
+          const nixl::ucx::rkey &rkey,
+          size_t size,
+          nixlUcxReq &req);
+    [[nodiscard]] nixl_status_t
+    atomicAdd(uint64_t value, uint64_t raddr, const nixl::ucx::rkey &rkey, nixlUcxReq &req) const;
+    nixl_status_t
+    estimateCost(size_t size,
+                 std::chrono::microseconds &duration,
+                 std::chrono::microseconds &err_margin,
+                 nixl_cost_t &method);
+    nixl_status_t
+    flushEp(nixlUcxReq &req) const noexcept;
+
+#ifdef HAVE_UCX_SGL_API
+    /* Scatter-gather list (SGL) operations */
+    [[nodiscard]] nixl_status_t
+    postSgl(const ucp_dt_local_sgl_t &local,
+            const ucp_dt_remote_sgl_t &remote,
+            size_t count,
+            nixlUcxReq &req);
+#endif
+
+    [[nodiscard]] ucp_ep_h
+    getEp() const noexcept {
+        return eph_;
+    }
+};
+
+class nixlUcxMem {
+private:
+    void *base;
+    size_t size;
+    ucp_mem_h memh;
+
+public:
+    [[nodiscard]] ucp_mem_h
+    getMemh() const noexcept {
+        return memh;
+    }
+
+    [[nodiscard]] void *
+    getBase() const noexcept {
+        return base;
+    }
+
+    [[nodiscard]] size_t
+    getSize() const noexcept {
+        return size;
+    }
+
+    friend class nixlUcxWorker;
+    friend class nixlUcxContext;
+    friend class nixlUcxEp;
+};
+
+class nixlUcxContext {
+private:
+    /* Local UCX stuff */
+    std::unique_ptr<ucp_context, void (*)(ucp_context_h)> ctx{nullptr, &ucp_cleanup};
+    const nixl::ucx::mt_mode_t mtType_;
+    const unsigned ucpVersion_;
+    const std::string name_;
+    const nixl_ucx_vram_memtype_hint_t vramMemTypeHintPolicy_;
+    uint64_t supportedMemoryTypesMask_{0};
+    ucs_memory_type_t vramMemTypeHint_{UCS_MEMORY_TYPE_UNKNOWN};
+
+    void
+    resolveMemoryTypeConfig();
+
+    [[nodiscard]] bool
+    supportsMemoryType(ucs_memory_type_t mem_type) const;
+
+public:
+    nixlUcxContext(const std::vector<std::string> &devs,
+                   bool prog_thread,
+                   unsigned long num_workers,
+                   nixl_thread_sync_t sync_mode,
+                   size_t num_device_channels,
+                   const std::string &engine_conf = "",
+                   const std::string &name = "",
+                   nixl_ucx_vram_memtype_hint_t vram_mem_type_hint_policy =
+                       nixl_ucx_vram_memtype_hint_t::AUTO);
+    nixlUcxContext(nixlUcxContext &&) = delete;
+    nixlUcxContext(const nixlUcxContext &) = delete;
+
+    void
+    operator=(nixlUcxContext &&) = delete;
+    void
+    operator=(const nixlUcxContext &) = delete;
+
+    [[nodiscard]] const std::string &
+    getName() const noexcept {
+        return name_;
+    }
+
+    /* Memory management */
+    int
+    memReg(void *addr, size_t size, nixlUcxMem &mem, nixl_mem_t nixl_mem_type);
+    [[nodiscard]] std::string
+    packRkey(nixlUcxMem &mem);
+    void
+    memDereg(nixlUcxMem &mem);
+
+    void
+    warnAboutHardwareSupportMismatch() const;
+
+    friend class nixlUcxWorker;
+};
+
+std::ostream &
+operator<<(std::ostream &os, const nixlUcxContext &ctx);
+
+[[nodiscard]] bool
+nixlUcxMtLevelIsSupported(const nixl::ucx::mt_mode_t) noexcept;
+
+class nixlUcxWorker {
+public:
+    explicit nixlUcxWorker(
+        const nixlUcxContext &,
+        ucp_err_handling_mode_t ucp_err_handling_mode = UCP_ERR_HANDLING_MODE_NONE,
+        size_t id = 0);
+
+    virtual ~nixlUcxWorker() = default;
+
+    nixlUcxWorker(nixlUcxWorker &&) = delete;
+    nixlUcxWorker(const nixlUcxWorker &) = delete;
+    void
+    operator=(nixlUcxWorker &&) = delete;
+    void
+    operator=(const nixlUcxWorker &) = delete;
+
+    /* Connection */
+    [[nodiscard]] std::string
+    epAddr();
+    [[nodiscard]] std::unique_ptr<nixlUcxEp>
+    connect(void *addr);
+
+    /* Active message handling */
+    int
+    regAmCallback(nixl::ucx::am_cb_op_t msg_id, ucp_am_recv_callback_t cb, void *arg);
+
+    /* Data access */
+    unsigned
+    progress();
+
+    void
+    progressLoop();
+
+    [[nodiscard]] nixl_status_t
+    test(nixlUcxReq req);
+
+    void
+    reqRelease(nixlUcxReq req);
+    void
+    reqCancel(nixlUcxReq req);
+
+    [[nodiscard]] nixl_status_t
+    arm() const noexcept;
+
+    [[nodiscard]] int
+    getEfd() const;
+
+    /* GPU signal management */
+    void
+    prepGpuSignal(const nixlUcxMem &mem, void *signal) const;
+
+    [[nodiscard]] ucp_worker_h
+    get() const noexcept {
+        return worker.get();
+    }
+
+    [[nodiscard]] size_t
+    getId() const noexcept {
+        return id_;
+    }
+
+    [[nodiscard]] const std::string &
+    getName() const noexcept {
+        return name_;
+    }
+
+private:
+    [[nodiscard]] ucp_worker *
+    createUcpWorker(const nixlUcxContext &) const;
+
+    const std::string name_;
+    const std::unique_ptr<ucp_worker, void (*)(ucp_worker *)> worker;
+    const ucp_err_handling_mode_t err_handling_mode_;
+    const size_t id_;
+};
+
+std::ostream &
+operator<<(std::ostream &os, const nixlUcxWorker &worker);
+
+[[nodiscard]] nixl_b_params_t
+get_ucx_backend_common_options();
+
+[[nodiscard]] std::string_view
+ucx_err_mode_to_string(ucp_err_handling_mode_t t);
+
+[[nodiscard]] ucp_err_handling_mode_t
+ucx_err_mode_from_string(std::string_view s);
+
+[[nodiscard]] std::string_view
+ucx_vram_memtype_hint_to_string(nixl_ucx_vram_memtype_hint_t t);
+
+[[nodiscard]] nixl_ucx_vram_memtype_hint_t
+ucx_vram_memtype_hint_from_string(std::string_view s);
+
+#endif

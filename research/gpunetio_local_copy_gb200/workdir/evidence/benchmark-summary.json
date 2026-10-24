@@ -1,0 +1,16 @@
+[
+  {
+    "bytes_per_fragment": 64,
+    "fragments": 32,
+    "nic_us": 152.968,
+    "cuda_graph_us": 99.947,
+    "nic_percent_slower": 53.049116031496666
+  },
+  {
+    "bytes_per_fragment": 4096,
+    "fragments": 32,
+    "nic_us": 691.0,
+    "cuda_graph_us": 639.069,
+    "nic_percent_slower": 8.126039598228063
+  }
+]

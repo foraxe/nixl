@@ -1,0 +1,17 @@
+{
+  "source_archive_sha256": "66fa82d270a68b70433353e858e766843880e3408c80d9b9b24225f8e498e885",
+  "sanitized_files": [
+    "workdir/README.md",
+    "workdir/JOURNAL.md",
+    "workdir/RESULTS.md",
+    "workdir/engram_scenario/README.md",
+    "workdir/challenge/GIN_COMPARISON.md",
+    "workdir/challenge/RESULTS.md",
+    "workdir/challenge/evidence/gin-preflight.json",
+    "workdir/engram_scenario/evidence/gin-preflight6.json",
+    "workdir/engram_scenario/evidence/before.txt",
+    "context/original-architecture/E_BRANCH_ALIGNMENT_20261023.md"
+  ],
+  "implementation_changed": false,
+  "gb200_tested": false
+}

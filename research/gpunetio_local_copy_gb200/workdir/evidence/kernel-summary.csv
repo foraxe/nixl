@@ -1,0 +1,5 @@
+Generating SQLite file /tmp/kernel-local-copy-20261023/example-trace.sqlite from /tmp/kernel-local-copy-20261023/example-trace.nsys-rep
+Processing [/tmp/kernel-local-copy-20261023/example-trace.sqlite] with [/usr/local/cuda-13.0/NsightSystems-cli-2025.4.1/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+100.0,13984,1,13984.0,13984.0,13984,13984,0.0,"transform(local_copy::Copy *, const float *, float *, float *, int *)"
+

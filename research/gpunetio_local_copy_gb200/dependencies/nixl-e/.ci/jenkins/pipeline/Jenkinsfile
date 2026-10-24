@@ -1,0 +1,63 @@
+#!/usr/bin/groovy
+
+/*
+ * This is the main Jenkins pipeline definition file that defines the actual build steps
+ * It is referenced by the JJB configuration (proj-jjb.yaml) and executed by Jenkins
+ * The pipeline uses a matrix-based build approach to handle multiple build configurations
+ * NOTE: This file should not be changed by none devops team members
+ */
+
+// Load required pipeline libraries
+// These libraries provide shared functionality and utilities for the build process
+// Requires pipeline-github-lib plugin to load library from github
+// Load Blossom GitHub library
+// This library provides functionality for interacting with GitHub
+// It is used to update the commit status and upload logs
+@Library('blossom-github-lib@master')
+@Library('ci-demo')  // External library for matrix build functionality
+@Library('swx-jenkins-lib') // External library for matrix build functionality
+
+// Initialize the build matrix
+// The matrix class handles the parallel execution of different build configurations
+// It manages the build environment, test execution, and result reporting
+def matrix = new com.mellanox.cicd.Matrix()
+
+def githubHelper = null
+def pipelineOverviewUrl = ""
+
+import ipp.blossom.*
+if (params.githubData) {
+    withCredentials([usernamePassword(credentialsId: 'svc-nixl-github-token', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+        githubHelper = GithubHelper.getInstance("${GIT_PASSWORD}", params.githubData)
+    }
+    pipelineOverviewUrl = "${env.BUILD_URL}/pipeline-overview/"
+    githubHelper.updateCommitStatus(pipelineOverviewUrl, "Test started", GitHubCommitState.PENDING, env.JOB_BASE_NAME)
+    currentBuild.description = githubHelper.getBuildDescription()
+} else if (params.UCX_VER) {
+    // Non-PR run (nightly orchestrator or manual) - label it by the UCX ref under test
+    currentBuild.description = "UCX ${params.UCX_VER}"
+}
+
+// Execute the main build process
+// This will:
+// 1. Parse the build matrix configuration from .ci/jenkins/lib/build-matrix.yaml
+// 2. Set up the build environment
+// 3. Execute build steps in parallel based on the matrix configuration
+// 4. Handle test execution and reporting
+// 5. Manage artifacts and build results
+try {
+    matrix.main()
+} catch (Exception ex) {
+    currentBuild.result = 'FAILURE'
+    println ex
+    throw ex
+} finally {
+    if (params.githubData) {
+        githubHelper.updateCommitStatus(
+            pipelineOverviewUrl,
+            "Test completed",
+            currentBuild.resultIsBetterOrEqualTo('SUCCESS') ? GitHubCommitState.SUCCESS : GitHubCommitState.FAILURE,
+            env.JOB_BASE_NAME
+        )
+    }
+}

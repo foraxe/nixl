@@ -1,0 +1,10 @@
+{
+  "local_copy.cuh": "10f09f1a22cfc8eed81b06a7d4e8c7bbbcdc191ecc186ece4227103f2af62034",
+  "runtime.cu": "b9f4d6603c62da24e4d1f62a9f2735cad97b1b093335079ab94ba30ad59aec35",
+  "probe.cu": "29730243dbd57c2aaf8d5e915abc6e8ef61b3cf2bbfde4a6f3e9ad151f08590b",
+  "test_copy.py": "d9da0581060f8b9dea83fb6bb15b1ecac3b9e5f89d8a73c9d50eeeea273814c0",
+  "liblocal_copy.so": "7fc6ffd4716fcf889ce88393f0cd14471a536258351229f7b06870373e3a6afd",
+  "liblocal_copy_testing.so": "80be83531dec908da7a374aec808252e9b9febb3fa1cbc6d400c25948089a426",
+  "perf_challenge.cu": "0120650dd23752deb4277b15f33b9641f03963dc4ef56c685fc0fa62057c2230",
+  "perf_challenge": "97cb73ab2a468faead56897bf61006a947aeea65a9d7ab2ec6f501fec303953f"
+}

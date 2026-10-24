@@ -1,0 +1,10 @@
+Generating SQLite file /tmp/kernel-local-copy-engram-20261024/ce2d-path.sqlite from /tmp/kernel-local-copy-engram-20261024/ce2d-path.nsys-rep
+Processing [/tmp/kernel-local-copy-engram-20261024/ce2d-path.sqlite] with [/usr/local/cuda-13.0/NsightSystems-cli-2025.4.1/target-linux-x64/reports/cuda_gpu_kern_sum.py]... 
+Time (%),Total Time (ns),Instances,Avg (ns),Med (ns),Min (ns),Max (ns),StdDev (ns),Name
+46.0,1181510,3,393836.7,394082.0,393282,394146,481.4,nvjet_tss_448x64_64x2_1x2_h_bz_coopB_NNN
+25.4,651364,1,651364.0,651364.0,651364,651364,0.0,"sm_copy(const unsigned char *, unsigned char *, const int *, int)"
+21.5,552388,7,78912.6,69185.0,62593,156033,34167.5,"validate(const unsigned char *, unsigned long, const int *, const float *, const float *, int, int, int, int, int, unsigned long long *)"
+5.0,128097,1,128097.0,128097.0,128097,128097,0.0,"init_weight(__nv_bfloat16 *, unsigned long)"
+1.7,44800,2,22400.0,22400.0,22336,22464,90.5,"expected_a(__nv_bfloat16 *, const int *, int, int, int)"
+0.4,11040,7,1577.1,1344.0,1088,3552,884.4,"consume(const __nv_bfloat16 *, float *, int)"
+

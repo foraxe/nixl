@@ -1,0 +1,824 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import csv
+import glob
+import io
+import json
+import logging
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import click
+import numpy as np
+import yaml
+from commands.args import cli_args, common_args, nixl_bench_args, plan_args
+from commands.nixlbench import NIXLBench
+from models.model_config import ModelConfig
+from models.models import BaseModelArch
+from models.utils import get_batch_size, override_yaml_args
+from tabulate import tabulate
+
+
+def parse_size(nbytes) -> int:
+    """Convert formatted string with unit (e.g. '1M', '512K') or int to bytes."""
+    if isinstance(nbytes, int):
+        return nbytes
+    if isinstance(nbytes, float):
+        return int(nbytes)
+
+    options = {"g": 1024 * 1024 * 1024, "m": 1024 * 1024, "k": 1024, "b": 1}
+    unit = 1
+    key = nbytes[-1].lower()
+    if key in options:
+        unit = options[key]
+        value = float(nbytes[:-1])
+    else:
+        value = float(nbytes)
+    return int(unit * value)
+
+
+def load_matrix(matrix_file) -> np.ndarray:
+    """Load traffic pattern matrix from file"""
+    if not os.path.isfile(matrix_file):
+        raise FileNotFoundError(f"Matrix file not found: {matrix_file}")
+    matrix = []
+    with open(matrix_file, "r") as f:
+        for line in f:
+            row = line.strip().split()
+            matrix.append([parse_size(x) for x in row])
+    mat = np.array(matrix)
+    return mat
+
+
+def load_tp_file(tp_file) -> dict:
+    """Load unified TP file with [rdma], [read], [write] sections.
+
+    File format:
+        [rdma]
+        0 710M 0 0
+        0 0 0 0
+
+        [read]
+        710M 710M 0 0
+
+        [write]
+        710M 710M 0 0
+
+    All sections are optional. Files without [section] headers are parsed
+    as legacy RDMA-only matrix files (backward compatible).
+
+    Returns:
+        dict with keys: 'rdma' (np.ndarray or None),
+        'read' (list[str] or None), 'write' (list[str] or None)
+    """
+    if not os.path.isfile(tp_file):
+        raise FileNotFoundError(f"Traffic-pattern file not found: {tp_file}")
+    sections: Dict[str, list] = {}
+    current_section = None
+
+    with open(tp_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("[") and line.endswith("]"):
+                current_section = line[1:-1].lower()
+                if current_section not in {"rdma", "read", "write"}:
+                    raise ValueError(
+                        f"{tp_file}: unsupported section [{current_section}]"
+                    )
+                if current_section in sections:
+                    raise ValueError(
+                        f"{tp_file}: duplicate section [{current_section}]"
+                    )
+                sections[current_section] = []
+            elif current_section is not None:
+                sections[current_section].append(line.split())
+            else:
+                # No section header yet -> legacy matrix file
+                sections.setdefault("rdma", []).append(line.split())
+
+    result: Dict[str, Any] = {"rdma": None, "read": None, "write": None}
+
+    expected_ranks: Optional[int] = None
+    if "rdma" in sections:
+        matrix_raw = [[parse_size(x) for x in row] for row in sections["rdma"]]
+        # Validate rectangular matrix and infer rank count from #columns.
+        row_widths = {len(r) for r in matrix_raw}
+        if len(row_widths) > 1:
+            raise ValueError(
+                f"{tp_file}: [rdma] matrix is not rectangular "
+                f"(found row widths {sorted(row_widths)})"
+            )
+        result["rdma"] = np.array(matrix_raw)
+        if matrix_raw:
+            expected_ranks = len(matrix_raw[0])
+            if len(matrix_raw) != expected_ranks:
+                raise ValueError(
+                    f"{tp_file}: [rdma] matrix must be square ({expected_ranks} "
+                    f"columns) but has {len(matrix_raw)} rows"
+                )
+
+    if "read" in sections and sections["read"]:
+        # Flatten to single list (read section is one row of values)
+        result["read"] = [val for row in sections["read"] for val in row]
+
+    if "write" in sections and sections["write"]:
+        result["write"] = [val for row in sections["write"] for val in row]
+
+    # If we have both an rdma matrix and a read/write list, sizes must agree.
+    for section_name in ("read", "write"):
+        section = result[section_name]
+        if section is None or expected_ranks is None:
+            continue
+        if len(section) != expected_ranks:
+            raise ValueError(
+                f"{tp_file}: [{section_name}] has {len(section)} entries but "
+                f"[rdma] implies {expected_ranks} ranks"
+            )
+
+    return result
+
+
+_ALIGN_BYTES = 4096  # O_DIRECT / storage block alignment
+
+
+def align_to_4k(size: int) -> int:
+    """Align size up to 4K boundary for O_DIRECT compatibility."""
+    return ((size + _ALIGN_BYTES - 1) // _ALIGN_BYTES) * _ALIGN_BYTES
+
+
+def parse_storage_config(
+    storage_config: Dict,
+    tp_idx: int,
+    storage_base_path: Path,
+    use_direct_io: bool = False,
+) -> Optional[Dict[int, Any]]:
+    """Parse per-rank storage requirements from YAML config.
+
+    Format (array-based, index is rank):
+        storage:
+          read: [1M, 1M, 0, 1M, ...]   # 0 or omit for no read
+          write: [1M, 1M, 1M, 0, ...]  # 0 or omit for no write
+
+    Args:
+        storage_config: Storage configuration with 'read' and/or 'write' arrays
+        tp_idx: Traffic pattern index (for file path generation)
+        storage_base_path: Base path for storage files
+        use_direct_io: When True, sizes are rounded up to 4K so they satisfy
+            O_DIRECT's alignment requirement. Buffered POSIX has no such
+            requirement, so we pass through the user's requested sizes
+            verbatim — silently upsizing would inflate the workload.
+
+    Returns:
+        Dict mapping rank -> StorageOp, or None if empty
+    """
+    from test.traffic_pattern import StorageOp
+
+    if not storage_config:
+        return None
+
+    if "read" not in storage_config and "write" not in storage_config:
+        raise ValueError("Storage config must have 'read' and/or 'write' arrays")
+
+    storage_ops = {}
+    read_sizes = storage_config.get("read", [])
+    write_sizes = storage_config.get("write", [])
+
+    # Determine number of ranks from array lengths
+    num_ranks = max(len(read_sizes), len(write_sizes))
+
+    for rank in range(num_ranks):
+        # Get size for this rank (0 if not specified)
+        read_val = read_sizes[rank] if rank < len(read_sizes) else 0
+        write_val = write_sizes[rank] if rank < len(write_sizes) else 0
+
+        # Parse size strings (e.g., "1M", "512K")
+        read_size = parse_size(read_val) if read_val else 0
+        write_size = parse_size(write_val) if write_val else 0
+
+        if use_direct_io:
+            # Align sizes to 4K so O_DIRECT will accept them.
+            read_size = align_to_4k(read_size) if read_size > 0 else 0
+            write_size = align_to_4k(write_size) if write_size > 0 else 0
+        file_size = read_size + write_size
+
+        if file_size == 0:
+            continue
+
+        file_path = storage_base_path / f"tp_{tp_idx}" / f"rank_{rank}.bin"
+        storage_ops[rank] = StorageOp(
+            file_path=str(file_path),
+            file_size=file_size,
+            read_offset=0,
+            read_size=read_size,
+            write_offset=read_size,
+            write_size=write_size,
+        )
+
+    return storage_ops if storage_ops else None
+
+
+@click.group()
+@click.option("--debug/--no-debug", default=False, help="Enable debug logging")
+def cli(debug):
+    """KVBench - NIXL Performance Testing CLI"""
+    log_level = logging.DEBUG if debug else logging.INFO
+
+    # Configure root logger
+    logging.basicConfig(
+        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # Set level for all existing loggers
+    for logger_name in logging.root.manager.loggerDict:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(log_level)
+
+
+@cli.command("plan")
+@cli_args
+@common_args
+@plan_args
+@nixl_bench_args
+def plan_command(model, model_config, model_configs, format, **kwargs):
+    """Display the recommended configuration for nixlbench"""
+    if not model:
+        click.echo("Error: --model is required")
+        return
+
+    if not model_config and not model_configs:
+        click.echo("Error: either --model_config or --model_configs is required")
+        return
+
+    # Load model architecture
+    model_arch = BaseModelArch.from_yaml(model, None)
+
+    # Get list of model config files
+    config_files = []
+
+    if model_config:
+        config_files.append(model_config)
+
+    if model_configs:
+        # Expand glob patterns into list of files
+        expanded_files = glob.glob(model_configs)
+        if not expanded_files:
+            click.echo(f"Warning: No files matched the pattern: {model_configs}")
+        config_files.extend(expanded_files)
+
+    if not config_files:
+        click.echo("Error: No valid model config files specified")
+        return
+
+    # Filter out duplicate paths
+    config_files = list(dict.fromkeys(config_files))
+
+    # Filter arguments for NIXLBench
+    filtered_args = {
+        k: v for k, v in kwargs.items() if k in NIXLBench.defaults() and v is not None
+    }
+
+    # Process each model config
+    all_plans = []
+    errors = []
+    for config_file in config_files:
+        # Skip if file doesn't exist
+        if not os.path.exists(config_file):
+            click.echo(f"Warning: Config file not found: {config_file}")
+            continue
+
+        try:
+            # Load model configuration
+            model_configuration = ModelConfig.from_yaml(config_file)
+            # Override yaml args with cli args if supplied
+            override_yaml_args(model_configuration, type("Args", (), kwargs)())
+            model_arch.set_model_config(model_configuration)
+
+            separator = "=" * 80
+            isl_nixl_bench = NIXLBench(model_arch, model_configuration, **filtered_args)
+
+            io_size = model_arch.get_io_size(model_configuration.system.page_size)
+            batch_size = get_batch_size(model_arch, model_configuration, io_size)
+            isl_nixl_bench.set_io_size(io_size)
+            isl_nixl_bench.set_batch_size(batch_size)
+            isl_nixl_bench.configure_buffer_size()
+
+            isl_nixl_bench.configure_scheme(direction="isl")
+            isl_nixl_bench.configure_segment_type(
+                kwargs.get("backend"), kwargs.get("source"), kwargs.get("destination")
+            )
+
+            # Generate plan
+            plan = isl_nixl_bench.plan(format=format)
+
+            # For JSON format, add config filename to the output
+            if format == "json":
+                plan_with_config = plan.copy() if isinstance(plan, dict) else {}
+                plan_with_config["config_file"] = config_file
+                all_plans.append(plan_with_config)
+            elif format == "csv":
+                plan_data = plan
+                # Add metadata
+                plan_data["config_file"] = config_file
+                plan_data["model"] = model_arch.to_dict().get("model")
+
+                # Add all model_config parameters with proper prefixes
+                model_config_dict = model_configuration.to_dict()
+
+                # Add strategy parameters
+                for key, value in model_config_dict.get("strategy", {}).items():
+                    plan_data[f"model_strategy_{key}"] = value
+
+                # Add runtime parameters
+                for key, value in model_config_dict.get("runtime", {}).items():
+                    plan_data[f"model_runtime_{key}"] = value
+
+                # Add system parameters
+                for key, value in model_config_dict.get("system", {}).items():
+                    plan_data[f"model_system_{key}"] = value
+
+                all_plans.append(plan_data)
+            else:
+                click.echo(separator)
+                click.echo(f"Model Config: {config_file}")
+                click.echo(f"ISL: {model_configuration.runtime.isl} tokens")
+                click.echo(f"Page Size: {model_configuration.system.page_size}")
+                click.echo(f"Requests: {model_configuration.runtime.num_requests}")
+                click.echo(f"TP: {model_configuration.model.tp_size}")
+                click.echo(f"PP: {model_configuration.model.pp_size}")
+                click.echo(separator)
+                click.echo(plan)
+                click.echo()
+        except Exception as e:
+            click.echo(f"Error processing config file {config_file}: {str(e)}")
+            errors.append((config_file, e))
+
+    # For JSON format, output all plans as an array
+    if format == "json" and all_plans:
+        click.echo(json.dumps(all_plans, indent=2))
+    # For CSV format, output all plans as CSV
+    elif format == "csv" and all_plans:
+        # Get all unique keys from all plans
+        fieldnames = set()
+        for plan in all_plans:
+            fieldnames.update(plan.keys())
+        fieldnames = set(sorted(list(fieldnames)))
+
+        # Write CSV to string buffer
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for plan in all_plans:
+            writer.writerow(plan)
+
+        # Print CSV output
+        click.echo(output.getvalue())
+
+    if errors:
+        raise click.ClickException(
+            f"Failed to process {len(errors)} config file(s): "
+            + ", ".join(f for f, _ in errors)
+        )
+
+
+@cli.command("profile")
+@cli_args
+@common_args
+@nixl_bench_args
+def profile_command(model, model_config, **kwargs):
+    """Run nixlbench"""
+    if not model or not model_config:
+        click.echo("Error: --model and --model_config are required")
+        return
+
+    model_arch = BaseModelArch.from_yaml(model, None)
+    model_configuration = ModelConfig.from_yaml(model_config)
+    override_yaml_args(model_configuration, type("Args", (), kwargs)())
+    model_arch.set_model_config(model_configuration)
+
+    filtered_args = {
+        k: v for k, v in kwargs.items() if k in NIXLBench.defaults() and v is not None
+    }
+    nixl_bench = NIXLBench(model_arch, model_configuration, **filtered_args)
+    io_size = model_arch.get_io_size(model_configuration.system.page_size)
+    batch_size = get_batch_size(model_arch, model_configuration, io_size)
+    nixl_bench.set_io_size(io_size)
+    nixl_bench.set_batch_size(batch_size)
+    nixl_bench.configure_buffer_size()
+
+    nixl_bench.configure_scheme(direction="isl")
+    nixl_bench.configure_segment_type(
+        kwargs.get("backend"), kwargs.get("source"), kwargs.get("destination")
+    )
+    separator = "=" * 80
+
+    click.echo(f"Model Config: {model_config}")
+    click.echo(f"ISL: {model_configuration.runtime.isl} tokens")
+    click.echo(f"Page Size: {model_configuration.system.page_size}")
+    click.echo(f"Requests: {model_configuration.runtime.num_requests}")
+    click.echo(f"TP: {model_configuration.model.tp_size}")
+    click.echo(f"PP: {model_configuration.model.pp_size}")
+    click.echo(separator)
+    nixl_bench.profile()
+
+
+@cli.command("kvcache")
+@cli_args
+@common_args
+def kvcache_command(model, model_config, **kwargs):
+    """Display kvcache information"""
+    if not model or not model_config:
+        click.echo("Error: --model and --model_config are required")
+        return
+
+    # Load model architecture
+    model_arch = BaseModelArch.from_yaml(model, None)
+
+    # Load model configuration
+    model_configuration = ModelConfig.from_yaml(model_config)
+    override_yaml_args(model_configuration, type("Args", (), kwargs)())
+    # Set model_config on the model instance using the new method
+    model_arch.set_model_config(model_configuration)
+
+    from math import floor, log
+
+    def format_bytes(size):
+        power = 0 if size <= 0 else floor(log(size, 1024))
+        return f"{round(size / 1024**power, 2)} {['B', 'KB', 'MB', 'GB', 'TB'][int(power)]}"
+
+    labels = [
+        "Model",
+        "ISL",
+        "Num Requests",
+        "Batch Size",
+        "IO Size",
+        "TP",
+        "PP",
+        "Page Size",
+        "Access",
+    ]
+    io_size = model_arch.get_io_size(model_configuration.system.page_size)
+    batch_size = get_batch_size(model_arch, model_configuration, io_size)
+
+    data = [
+        [
+            model_arch.model_name,
+            model_configuration.runtime.isl,
+            model_configuration.runtime.num_requests,
+            batch_size,
+            format_bytes(io_size),
+            model_configuration.model.tp_size,
+            model_configuration.model.pp_size,
+            model_configuration.system.page_size,
+            model_configuration.system.access_pattern,
+        ]
+    ]
+    click.echo(tabulate(data, headers=labels, floatfmt=".6f"))
+
+
+@cli.command("sequential-ct-perftest")
+@click.argument("config_file", type=click.Path(exists=True))
+@click.option(
+    "--verify-buffers/--no-verify-buffers",
+    default=False,
+    help="Verify buffer contents after transfer",
+)
+@click.option(
+    "--print-recv-buffers/--no-print-recv-buffers",
+    default=False,
+    help="Print received buffer contents",
+)
+@click.option(
+    "--json-output-path",
+    type=click.Path(),
+    help="Path to save JSON output",
+    default=None,
+)
+@click.option(
+    "--storage-path",
+    type=click.Path(),
+    help="Base path for storage files (default: <config_dir>/storage)",
+    default=None,
+)
+@click.option(
+    "--storage-backend",
+    type=click.Choice(["POSIX", "GDS", "GDS_MT"]),
+    default="POSIX",
+    help="NIXL storage backend (POSIX, GDS, or GDS_MT for multi-threaded GDS)",
+)
+@click.option(
+    "--storage-direct-io/--no-storage-direct-io",
+    default=None,
+    help="Use O_DIRECT for file I/O. Auto-enabled for GDS/GDS_MT if not specified.",
+)
+@click.option(
+    "--iters",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Number of workload benchmark iterations per TP "
+    "(default: the config's 'iters' value if present, else 3).",
+)
+@click.option(
+    "--warmup-iters",
+    type=click.IntRange(min=0),
+    default=30,
+    help="Number of warmup iterations per TP (default: 30)",
+)
+@click.option(
+    "--isolation-iters",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Number of isolation benchmark iterations per TP "
+    "(default: the config's 'isolation_iters' value if present, else 10).",
+)
+@click.option(
+    "--storage-block-size",
+    type=str,
+    default="0",
+    help="Split storage I/O into blocks of this size for higher queue depth. "
+    "Accepts size suffixes: K, M, G (e.g., '1M' = 1MB). "
+    "0 = no splitting (legacy). Recommended: '1M' for NFS/VAST with POSIX backend.",
+)
+@click.option(
+    "--storage-posix-api",
+    type=click.Choice(["auto", "aio", "uring"]),
+    default="auto",
+    help="POSIX async I/O API. auto=best available (libaio), "
+    "aio=Linux AIO (libaio), uring=io_uring. Use 'uring' for best VAST performance.",
+)
+@click.option(
+    "--storage-num-handles",
+    type=click.IntRange(min=1),
+    default=1,
+    help="Number of concurrent transfer handles per storage op. "
+    "Each handle gets its own async I/O queue. "
+    "Recommended: 8 with --storage-block-size 1M --storage-posix-api uring.",
+)
+def sequential_ct_perftest(
+    config_file,
+    verify_buffers,
+    print_recv_buffers,
+    json_output_path,
+    storage_path,
+    storage_backend,
+    storage_direct_io,
+    iters,
+    warmup_iters,
+    isolation_iters,
+    storage_block_size,
+    storage_posix_api,
+    storage_num_handles,
+):
+    """Run sequential custom traffic performance test using patterns defined in YAML config."""
+    from test.sequential_custom_traffic_perftest import SequentialCTPerftest
+    from test.traffic_pattern import TrafficPattern
+
+    logger = logging.getLogger(__name__)
+
+    config_path = Path(config_file)
+    config_dir = config_path.parent
+
+    logger.info("Loading config from: %s", config_file)
+
+    with open(config_file, "r") as f:
+        config = yaml.safe_load(f)
+
+    if "traffic_patterns" not in config:
+        raise ValueError("Config file must contain 'traffic_patterns' key")
+
+    # Iteration counts: an explicit CLI flag wins; otherwise fall back to the
+    # value baked into the workload config by matgen, then to a default.
+    n_iters = iters if iters is not None else int(config.get("iters", 3))
+    if isolation_iters is None:
+        isolation_iters = int(config.get("isolation_iters", 10))
+
+    # Determine storage base path (CLI override > default)
+    if storage_path:
+        storage_base_path = Path(storage_path)
+    else:
+        storage_base_path = config_dir / "storage"
+
+    # Resolve direct_io up front so we know whether to 4K-align storage
+    # sizes during TP parse (only O_DIRECT requires it).
+    use_direct_io = storage_direct_io
+    if storage_direct_io is None and storage_backend in ("GDS", "GDS_MT"):
+        use_direct_io = True  # Auto-enable for GDS backends
+    elif storage_direct_io is None:
+        use_direct_io = False  # Default off for POSIX
+
+    logger.info("Loading %d traffic patterns...", len(config["traffic_patterns"]))
+
+    patterns = []
+    has_storage = False
+
+    for idx, tp_config in enumerate(config["traffic_patterns"]):
+        matrix = None
+        storage_ops = None
+
+        if "tp_file" in tp_config:
+            legacy_keys = [
+                key for key in ("matrix_file", "matrix", "storage") if key in tp_config
+            ]
+            if legacy_keys:
+                raise ValueError(
+                    f"Traffic pattern {idx} mixes 'tp_file' with legacy fields: "
+                    f"{', '.join(legacy_keys)}"
+                )
+            # Unified TP file with [rdma], [read], [write] sections
+            tp_file = tp_config["tp_file"]
+            if not os.path.isabs(tp_file):
+                tp_file = config_dir / tp_file
+            tp_data = load_tp_file(tp_file)
+            matrix = tp_data["rdma"]
+            # Build storage config from read/write arrays in the TP file
+            if tp_data["read"] or tp_data["write"]:
+                storage_config = {}
+                if tp_data["read"]:
+                    storage_config["read"] = tp_data["read"]
+                if tp_data["write"]:
+                    storage_config["write"] = tp_data["write"]
+                storage_ops = parse_storage_config(
+                    storage_config, idx, storage_base_path, use_direct_io=use_direct_io
+                )
+                if storage_ops:
+                    has_storage = True
+            logger.debug(
+                "TP %d: tp_file=%s, rdma=%s, storage=%s",
+                idx,
+                tp_config["tp_file"],
+                matrix.shape if matrix is not None else None,
+                list(storage_ops.keys()) if storage_ops else None,
+            )
+        else:
+            # Legacy: separate matrix_file + inline storage config
+            if "matrix_file" in tp_config:
+                matrix_file = tp_config["matrix_file"]
+                if not os.path.isabs(matrix_file):
+                    matrix_file = config_dir / matrix_file
+                matrix = load_matrix(matrix_file)
+                logger.debug(
+                    "TP %d: matrix=%s, shape=%s, mem_type=%s",
+                    idx,
+                    tp_config["matrix_file"],
+                    matrix.shape,
+                    tp_config.get("mem_type", "cuda"),
+                )
+            elif "matrix" in tp_config:
+                matrix = np.array(tp_config["matrix"])
+                logger.debug(
+                    "TP %d: inline matrix, shape=%s, mem_type=%s",
+                    idx,
+                    matrix.shape,
+                    tp_config.get("mem_type", "cuda"),
+                )
+
+            if "storage" in tp_config:
+                storage_ops = parse_storage_config(
+                    tp_config["storage"],
+                    idx,
+                    storage_base_path,
+                    use_direct_io=use_direct_io,
+                )
+                if storage_ops:
+                    has_storage = True
+                    logger.debug(
+                        "TP %d: storage config, ranks=%s",
+                        idx,
+                        list(storage_ops.keys()),
+                    )
+
+        # Validate: must have either RDMA matrix or storage ops
+        if matrix is None and storage_ops is None:
+            raise ValueError(
+                f"Traffic pattern {idx} must have either 'tp_file', 'matrix_file'/'matrix', or 'storage' config"
+            )
+
+        # For storage-only patterns without matrix, log it
+        if matrix is None:
+            logger.debug("TP %d: storage-only pattern (no RDMA)", idx)
+
+        compute_time = tp_config.get("sleep_before_launch_sec")
+        if compute_time:
+            logger.debug("TP %d: prefill compute_time=%.3f sec", idx, compute_time)
+
+        decode_compute = tp_config.get("decode_compute_sec")
+        if decode_compute is None and "sleep_after_launch_sec" in tp_config:
+            # Deprecated alias. The old key was never documented, and its
+            # docstring already promised "sleep after RDMA", which is what
+            # decode_compute_sec does. Keep it working, but say it moved.
+            logger.warning(
+                "TP %d: 'sleep_after_launch_sec' is deprecated, use "
+                "'decode_compute_sec'. The sleep now runs after the RDMA "
+                "transfer and before the storage write, not at the very end "
+                "of the traffic pattern.",
+                idx,
+            )
+            decode_compute = tp_config["sleep_after_launch_sec"]
+        if decode_compute:
+            logger.debug("TP %d: decode compute_time=%.3f sec", idx, decode_compute)
+
+        pattern = TrafficPattern(
+            mem_type=tp_config.get("mem_type", "cuda").lower(),  # Default: GPU memory
+            matrix=matrix,
+            shards=tp_config.get("shards", 1),
+            xfer_op=tp_config.get("xfer_op", "WRITE").upper(),
+            sleep_before_launch_sec=compute_time,
+            decode_compute_sec=decode_compute,
+            storage_ops=storage_ops,
+        )
+
+        patterns.append(pattern)
+
+    if has_storage:
+        logger.info(
+            "Loaded %d traffic patterns, storage enabled (path=%s, backend=%s, direct_io=%s)",
+            len(patterns),
+            storage_base_path,
+            storage_backend,
+            use_direct_io,
+        )
+    else:
+        logger.info("Loaded %d traffic patterns, no storage", len(patterns))
+
+    # Parse block size string (supports K, M, G suffixes via parse_size()).
+    block_size_bytes = parse_size(storage_block_size) if storage_block_size else 0
+    if block_size_bytes > 0:
+        logger.info(
+            "Storage block size: %d bytes (%s)", block_size_bytes, storage_block_size
+        )
+
+    # Pass storage config to perftest - it creates the backend with its nixl_agent
+    perftest = SequentialCTPerftest(
+        patterns,
+        n_iters=n_iters,
+        warmup_iters=warmup_iters,
+        n_isolation_iters=isolation_iters,
+        storage_path=storage_base_path if has_storage else None,
+        storage_nixl_backend=storage_backend if has_storage else None,
+        storage_direct_io=use_direct_io if has_storage else False,
+        storage_block_size=block_size_bytes,
+        storage_posix_api=storage_posix_api,
+        storage_num_handles=storage_num_handles,
+    )
+    perftest.run(
+        verify_buffers=verify_buffers,
+        print_recv_buffers=print_recv_buffers,
+        json_output_path=json_output_path,
+    )
+
+
+@cli.command("ct-perftest")
+@click.argument("config_file", type=click.Path(exists=True))
+@click.option(
+    "--verify-buffers/--no-verify-buffers",
+    default=False,
+    help="Verify buffer contents after transfer",
+)
+@click.option(
+    "--print-recv-buffers/--no-print-recv-buffers",
+    default=False,
+    help="Print received buffer contents",
+)
+def ct_perftest(config_file, verify_buffers, print_recv_buffers):
+    """Run custom traffic performance test using patterns defined in YAML config"""
+    from test.custom_traffic_perftest import CTPerftest
+    from test.traffic_pattern import TrafficPattern
+
+    with open(config_file, "r") as f:
+        config = yaml.safe_load(f)
+
+    tp_config = config.get("traffic_pattern")
+    if tp_config is None:
+        raise ValueError("Config file must contain 'traffic_pattern' key")
+
+    iters = config.get("iters", 1)
+    warmup_iters = config.get("warmup_iters", 0)
+
+    pattern = TrafficPattern(
+        matrix=load_matrix(Path(tp_config["matrix_file"])),
+        shards=tp_config.get("shards", 1),
+        mem_type=tp_config.get("mem_type", "cuda").lower(),
+        xfer_op=tp_config.get("xfer_op", "WRITE").upper(),
+    )
+
+    perftest = CTPerftest(pattern, iters=iters, warmup_iters=warmup_iters)
+    perftest.run(verify_buffers=verify_buffers, print_recv_buffers=print_recv_buffers)
+
+
+if __name__ == "__main__":
+    cli()

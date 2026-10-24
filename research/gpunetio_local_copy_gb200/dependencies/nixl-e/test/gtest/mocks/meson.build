@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+gtest_inc_dirs = include_directories('..')
+
+mock_backend_sources = ['gmock_engine.cpp', 'mock_backend_plugin.cpp', 'mock_backend_engine.cpp']
+mock_backend_plugin = shared_library('MOCK_BACKEND', mock_backend_sources,
+               dependencies: [nixl_infra, nixl_common_dep, gmock_dep],
+               include_directories: [nixl_inc_dirs, utils_inc_dirs, gtest_inc_dirs],
+               name_prefix: 'libplugin_',
+               install: true,
+               install_dir: plugin_install_dir)
+run_command('sh', '-c',
+            'echo "MOCK_BACKEND=' + mock_backend_plugin.full_path() + '" >> ' + plugin_build_dir + '/pluginlist',
+                check: true
+            )
+
+mock_stale_plugin = shared_library('MOCK_STALE_BACKEND', ['mock_stale_plugin.cpp'],
+               dependencies: [nixl_infra, nixl_common_dep],
+               include_directories: [nixl_inc_dirs, utils_inc_dirs, gtest_inc_dirs],
+               name_prefix: 'libplugin_',
+               install: true,
+               install_dir: plugin_install_dir)
+run_command('sh', '-c',
+            'echo "MOCK_STALE_BACKEND=' + mock_stale_plugin.full_path() + '" >> ' + plugin_build_dir + '/pluginlist',
+                check: true
+            )
+
+mock_stale_telemetry_plugin = shared_library('libtelemetry_exporter_mock_stale',
+               ['mock_stale_telemetry_plugin.cpp'],
+               dependencies: [nixl_infra, nixl_common_dep],
+               include_directories: [nixl_inc_dirs, utils_inc_dirs, gtest_inc_dirs],
+               name_prefix: '',
+               install: true,
+               install_dir: plugin_install_dir)
+
+mock_bind_failed_telemetry_plugin = shared_library('libtelemetry_exporter_mock_bind_failed',
+               ['mock_bind_failed_telemetry_plugin.cpp'],
+               dependencies: [nixl_infra, nixl_common_dep],
+               include_directories: [nixl_inc_dirs, utils_inc_dirs, gtest_inc_dirs],
+               name_prefix: '',
+               install: true,
+               install_dir: plugin_install_dir)
+
+trace_recorder_plugin = shared_library('libtrace_backend_recorder', ['trace_recorder_plugin.cpp'],
+               dependencies: [nixl_infra, nixl_common_dep],
+               include_directories: [nixl_inc_dirs, utils_inc_dirs],
+               name_prefix: '',
+               install: true,
+               install_dir: plugin_install_dir)
+
+mock_stale_trace_plugin = shared_library('libtrace_backend_mock_stale',
+               ['mock_stale_trace_plugin.cpp'],
+               dependencies: [nixl_infra, nixl_common_dep],
+               include_directories: [nixl_inc_dirs, utils_inc_dirs],
+               name_prefix: '',
+               install: true,
+               install_dir: plugin_install_dir)
+
+source_root = meson.project_source_root()
+mocks_dep = declare_dependency(variables : {'path' : meson.current_source_dir().split(source_root + '/')[1]})

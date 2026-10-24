@@ -1,0 +1,1 @@
+{"status": "PASS", "scenario": "injected reset failure", "close_seconds": 0.00035312026739120483, "retained": true, "message": "cleanup not complete: context and tensors quarantined; close refused"}
