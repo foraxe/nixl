@@ -259,6 +259,69 @@ putDeferred(const memViewElem &src,
 }
 
 __device__ inline nixl_status_t
+putDeferredWarp(const memViewElem &src,
+                const memViewElem &dst,
+                size_t bytes,
+                uint64_t owner_token,
+                xferStatusH *statuses,
+                bool active) {
+#if defined(NIXL_ENABLE_GPUNETIO_DEVICE_API) && NIXL_GPUNETIO_DEVICE_API_HAS_SDK_PROFILE && \
+    defined(NIXL_GPUNETIO_DEVICE_API_PUBLIC)
+    constexpr uint32_t mask = 0xffffffffU;
+    if (blockIdx.x || blockIdx.y || blockIdx.z || blockDim.y != 1 || blockDim.z != 1 ||
+        threadIdx.x >= 32) {
+        return NIXL_ERR_NOT_ALLOWED;
+    }
+    if (__activemask() != mask) {
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+    const uint64_t token = __shfl_sync(mask, static_cast<unsigned long long>(owner_token), 0);
+    const auto status_base = reinterpret_cast<unsigned long long>(statuses);
+    const auto common_status_base = __shfl_sync(mask, status_base, 0);
+    int error = NIXL_SUCCESS;
+    if (owner_token == 0 || owner_token != token || statuses == nullptr ||
+        status_base != common_status_base || (!__isGlobal(statuses) && !__isShared(statuses))) {
+        error = NIXL_ERR_INVALID_PARAM;
+    }
+    const nixlDeviceMemViewWrapper *s = nullptr, *d = nullptr;
+    nixl_device_exec_mode_t mode = nixl_device_exec_mode_t::NONE;
+    memViewElem backend_src{}, backend_dst{};
+    if (active && error == NIXL_SUCCESS) {
+        if (!unwrapViews(src, dst, s, d, mode) || !prepareStatus(&statuses[threadIdx.x], mode)) {
+            error = NIXL_ERR_INVALID_PARAM;
+        } else if (mode != nixl_device_exec_mode_t::GPUNETIO_DIRECT) {
+            error = NIXL_ERR_NOT_SUPPORTED;
+        } else if (statusModeTag(statuses[threadIdx.x]) == static_cast<uint32_t>(mode) &&
+                   gpunetio::isStatusInProgress(statuses[threadIdx.x])) {
+            error = NIXL_ERR_REPOST_ACTIVE;
+        } else {
+            backend_src = {s->backend_memview, src.index, src.offset};
+            backend_dst = {d->backend_memview, dst.index, dst.offset};
+        }
+    }
+    const uint32_t invalid = __ballot_sync(mask, error != NIXL_SUCCESS);
+    if (invalid) {
+        return static_cast<nixl_status_t>(__shfl_sync(mask, error, __ffs(invalid) - 1));
+    }
+    const nixl_status_t result =
+        gpunetio::putDeferredWarp(backend_src, backend_dst, bytes, owner_token, statuses, active);
+    if (result == NIXL_IN_PROG && active) {
+        setStatusModeTag(statuses[threadIdx.x], nixl_device_exec_mode_t::GPUNETIO_DIRECT);
+    }
+    __syncwarp(mask);
+    return result;
+#else
+    (void)src;
+    (void)dst;
+    (void)bytes;
+    (void)owner_token;
+    (void)statuses;
+    (void)active;
+    return NIXL_ERR_NOT_SUPPORTED;
+#endif
+}
+
+__device__ inline nixl_status_t
 commit(const memViewElem &owner_view, uint64_t owner_token) {
     if (owner_view.mvh == nullptr) {
         return NIXL_ERR_INVALID_PARAM;
