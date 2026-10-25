@@ -167,7 +167,8 @@ struct Copy {
         return {first, last, 0, cookie};
     }
 
-    __device__ int wait(Ticket ticket) {
+    // Retained for matched measurement of the original completion path.
+    __device__ int wait_legacy(Ticket ticket) {
         if (ticket.error) return ticket.error;
         if (ticket.cookie != cookie || ticket.first > ticket.last) return -EINVAL;
         auto lock = cuda::atomic_ref<uint64_t, cuda::thread_scope_device>(owner);
@@ -190,6 +191,88 @@ struct Copy {
         }
         if (retired == qp->sq_rsvd_index)
             lock.store(0, cuda::memory_order_release);
+        return 0;
+    }
+
+    __device__ int wait(Ticket ticket) {
+        if (ticket.error) return ticket.error;
+        if (ticket.cookie != cookie || ticket.first > ticket.last) return -EINVAL;
+        auto lock = cuda::atomic_ref<uint64_t, cuda::thread_scope_device>(owner);
+        if (!caller() || lock.load(cuda::memory_order_acquire) != grid()) return -EPERM;
+        if (cuda::atomic_ref<int, cuda::thread_scope_device>(first_fault)
+                .load(cuda::memory_order_acquire)) return recover(0);
+        if (ticket.first < retired || ticket.last >= qp->sq_rsvd_index) return -EINVAL;
+        auto* cq = doca_gpu_dev_verbs_qp_get_cq<DOCA_GPUNETIO_VERBS_QP_SQ>(qp);
+        // Exclusive owner; <=32 admitted entries fit the runtime's 128-entry CQ.
+        // Observe every CQE, including intermediate errors, without publishing
+        // partial progress or repeating the data-acquire fence for each entry.
+        const uint64_t deadline = clock64() + 2000000000ULL;
+        for (uint64_t i = retired; i <= ticket.last; ++i) {
+            int status;
+            do {
+                status = doca_priv_gpu_dev_verbs_poll_one_cq_device_at<
+                    DOCA_GPUNETIO_VERBS_RESOURCE_SHARING_MODE_EXCLUSIVE>(cq, i);
+            } while (status == EBUSY && clock64() < deadline);
+            if (status != 0) return recover(status == EBUSY ? -ETIMEDOUT : status);
+        }
+        doca_gpu_dev_verbs_fence_acquire_nvidia_nic();
+        doca_gpu_dev_verbs_atomic_max<uint64_t, DOCA_GPUNETIO_VERBS_RESOURCE_SHARING_MODE_EXCLUSIVE>(
+            &cq->cqe_ci, ticket.last + 1);
+        retired = ticket.last + 1;
+        if (retired == qp->sq_rsvd_index) lock.store(0, cuda::memory_order_release);
+        return 0;
+    }
+
+    // Warp0 cooperatively inspects the same bounded batch, then lane0 acquires
+    // payload visibility and publishes retirement. No CQE/error is skipped.
+    __device__ int wait_warp(Ticket ticket) {
+        if (__activemask() != 0xffffffffu) return -EINVAL;
+        if (blockIdx.x || blockIdx.y || blockIdx.z || blockDim.y != 1 || blockDim.z != 1 || threadIdx.x >= 32)
+            return -EPERM;
+        const int lane = threadIdx.x;
+        bool different = reinterpret_cast<uintptr_t>(this) != broadcast(reinterpret_cast<uintptr_t>(this));
+        const uint64_t leader_first=broadcast(ticket.first), leader_last=broadcast(ticket.last),
+                       leader_cookie=broadcast(ticket.cookie);
+        const int leader_error=__shfl_sync(0xffffffffu, ticket.error, 0);
+        different |= ticket.first != leader_first || ticket.last != leader_last ||
+                     ticket.cookie != leader_cookie || ticket.error != leader_error;
+        if (__any_sync(0xffffffffu, different)) return -EINVAL;
+        if (ticket.error) return ticket.error;
+        int status = 0;
+        if (lane == 0) {
+            if (ticket.cookie != cookie || ticket.first > ticket.last || ticket.first < retired ||
+                ticket.last >= qp->sq_rsvd_index || ticket.last - retired >= 32) status = -EINVAL;
+            else if (cuda::atomic_ref<uint64_t, cuda::thread_scope_device>(owner)
+                         .load(cuda::memory_order_acquire) != grid()) status = -EPERM;
+            else if (cuda::atomic_ref<int, cuda::thread_scope_device>(first_fault)
+                         .load(cuda::memory_order_acquire)) status = recover(0);
+        }
+        status = __shfl_sync(0xffffffffu, status, 0);
+        if (status) return status;
+        const uint64_t first = broadcast(retired), index = first + lane;
+        auto* cq = doca_gpu_dev_verbs_qp_get_cq<DOCA_GPUNETIO_VERBS_QP_SQ>(qp);
+        const uint64_t deadline = clock64() + 2000000000ULL;
+        do {
+            int own = index <= ticket.last ? doca_priv_gpu_dev_verbs_poll_one_cq_device_at<
+                DOCA_GPUNETIO_VERBS_RESOURCE_SHARING_MODE_EXCLUSIVE>(cq, index) : 0;
+            if (own == EBUSY && clock64() >= deadline) own = -ETIMEDOUT;
+            unsigned failed = __ballot_sync(0xffffffffu, own < 0);
+            if (failed) {
+                int cause = __shfl_sync(0xffffffffu, own, __ffs(failed)-1);
+                if (lane == 0) status = recover(cause);
+                return __shfl_sync(0xffffffffu, status, 0);
+            }
+            if (!__any_sync(0xffffffffu, own == EBUSY)) break;
+        } while (true);
+        if (lane == 0) {
+            doca_gpu_dev_verbs_fence_acquire_nvidia_nic();
+            doca_gpu_dev_verbs_atomic_max<uint64_t, DOCA_GPUNETIO_VERBS_RESOURCE_SHARING_MODE_EXCLUSIVE>(
+                &cq->cqe_ci, ticket.last + 1);
+            retired = ticket.last + 1;
+            if (retired == qp->sq_rsvd_index)
+                cuda::atomic_ref<uint64_t, cuda::thread_scope_device>(owner).store(0, cuda::memory_order_release);
+        }
+        __syncwarp();
         return 0;
     }
 };

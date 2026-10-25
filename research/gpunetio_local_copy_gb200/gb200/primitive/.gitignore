@@ -1,0 +1,5 @@
+__pycache__/
+# Raw machine-specific run products remain local; retained JSONL is compressed.
+evidence/*/results.jsonl
+evidence/*/gpus.csv
+evidence/*/errors.log

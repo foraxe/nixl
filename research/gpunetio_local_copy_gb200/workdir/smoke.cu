@@ -21,7 +21,9 @@ int main(int argc, char **argv) {
     uint64_t *out, result[6]{};
     if (cudaMallocHost(&src, sn) || cudaMalloc(&dst, dn) || cudaMalloc(&out, sizeof(result))) return 2;
     for (size_t i = 0; i < sn; ++i) src[i] = (i * 17 + 31) % 251;
-    auto *handle = lc_open(src, sn, dst, dn, gpu, "mlx5_bond_0", 3);
+    const char* nic = argc > 7 ? argv[7] : "mlx5_bond_0";
+    int gid = argc > 8 ? atoi(argv[8]) : 3;
+    auto *handle = lc_open(src, sn, dst, dn, gpu, nic, gid);
     if (!handle) { fprintf(stderr, "OPEN_FAIL %s\n", lc_error()); return 3; }
     cudaMemset(out, 0, sizeof(result));
     auto launch = lc_probe(lc_device(handle), src, dst, bytes, count, window, rounds, 1, mode, out, nullptr);

@@ -1,5 +1,6 @@
 """Subprocess-only reset-failure injection; leaves live kernel quarantined until process exit."""
 import ctypes as C
+import argparse
 import json
 import os
 from pathlib import Path
@@ -8,11 +9,17 @@ import weakref
 import torch
 import local_copy
 
-torch.cuda.set_device(7)
+parser = argparse.ArgumentParser()
+parser.add_argument("--gpu", type=int, default=7)
+parser.add_argument("--nic", default="mlx5_bond_0")
+parser.add_argument("--gid", type=int, default=3)
+parser.add_argument("--library", default=str(Path(__file__).with_name("liblocal_copy_testing.so")))
+args = parser.parse_args()
+torch.cuda.set_device(args.gpu)
 src = torch.empty(4096, dtype=torch.uint8, pin_memory=True)
-dst = torch.empty(4096, dtype=torch.uint8, device="cuda:7")
+dst = torch.empty(4096, dtype=torch.uint8, device=f"cuda:{args.gpu}")
 result = torch.zeros(6, dtype=torch.int64, device=dst.device)
-copy = local_copy.LocalCopy(src, dst, library=Path(__file__).with_name("liblocal_copy_testing.so"))
+copy = local_copy.LocalCopy(src, dst, nic=args.nic, gid=args.gid, library=args.library)
 copy.lib.lc_test_fail_reset.argtypes = [C.c_void_p]
 copy.lib.lc_test_state.argtypes = [C.c_void_p]
 copy.lib.lc_test_fail_reset(copy.handle)
