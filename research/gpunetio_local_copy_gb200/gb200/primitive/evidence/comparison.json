@@ -1,0 +1,255 @@
+{
+  "status": "PASS",
+  "matching_source_binary_hashes": true,
+  "measured_kernels": 18900,
+  "validated_warmup_kernels": 6300,
+  "scope": "single-CTA in-kernel registered host-to-HBM copy, independent integer work, wait and full-payload consume; not model throughput",
+  "named_case": [
+    {
+      "seed": 20261029,
+      "comparisons": [
+        {
+          "path": 4,
+          "serialized": 0,
+          "bytes": 512,
+          "fragments": 32,
+          "work": 0,
+          "versus_legacy_e2e_ms": {
+            "median_reduction_percent": 26.824194551401405,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              26.834898580084477,
+              26.824194551401405,
+              26.782089727543333,
+              26.852969779262015,
+              26.843035322052934,
+              26.792538020196666,
+              26.75148247186928
+            ]
+          },
+          "versus_legacy_wall_ms": {
+            "median_reduction_percent": 26.789941914815074,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              26.791943566300848,
+              26.789941914815074,
+              26.748107622832485,
+              26.811326771575317,
+              26.809534432976278,
+              26.750375944845306,
+              26.71565045241353
+            ]
+          },
+          "async_versus_serial_e2e_ms": {
+            "median_reduction_percent": 0.14752180893294886,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              0.15700552649435817,
+              0.07289670461803066,
+              0.09190462953919676,
+              0.20402594509073557,
+              0.14752180893294886,
+              0.12995012318969268,
+              0.4551894086777919
+            ]
+          },
+          "async_versus_serial_wall_ms": {
+            "median_reduction_percent": 0.1467444970813636,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              0.15444517196395724,
+              0.07950159003179413,
+              0.10446683178090277,
+              0.2046297800042396,
+              0.1467444970813636,
+              0.13469039949821626,
+              0.4565503173463825
+            ]
+          }
+        },
+        {
+          "path": 4,
+          "serialized": 0,
+          "bytes": 512,
+          "fragments": 32,
+          "work": 1024,
+          "versus_legacy_e2e_ms": {
+            "median_reduction_percent": 34.3746499660673,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              34.327133884700466,
+              34.21149276123692,
+              34.37868536002055,
+              34.37425875655589,
+              34.3746499660673,
+              34.37557658346293,
+              34.37852139359872
+            ]
+          },
+          "versus_legacy_wall_ms": {
+            "median_reduction_percent": 34.33125048011063,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              34.28833915212996,
+              34.16825172324308,
+              34.340390423194066,
+              34.33007056353405,
+              34.331912265846334,
+              34.33125048011063,
+              34.337411653841734
+            ]
+          },
+          "async_versus_serial_e2e_ms": {
+            "median_reduction_percent": 18.137650823401753,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              18.097855784124008,
+              17.92865272647336,
+              18.147340047417703,
+              18.09255566291812,
+              18.140369189295814,
+              18.170800346744333,
+              18.137650823401753
+            ]
+          },
+          "async_versus_serial_wall_ms": {
+            "median_reduction_percent": 18.106400387028,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              18.077776745169803,
+              17.890200264708366,
+              18.126696462486713,
+              18.060669694673237,
+              18.106400387028,
+              18.140069107100608,
+              18.11489151121295
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": 20261030,
+      "comparisons": [
+        {
+          "path": 4,
+          "serialized": 0,
+          "bytes": 512,
+          "fragments": 32,
+          "work": 0,
+          "versus_legacy_e2e_ms": {
+            "median_reduction_percent": 26.921679250892893,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              26.751386609990934,
+              26.904531596732127,
+              26.921679250892893,
+              26.988669215618977,
+              26.868975339730273,
+              26.953523722801943,
+              26.944010514664164
+            ]
+          },
+          "versus_legacy_wall_ms": {
+            "median_reduction_percent": 26.878848878406846,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              26.70976143385856,
+              26.86481720512881,
+              26.878848878406846,
+              26.95779040318993,
+              26.823879401184936,
+              26.91877935738074,
+              26.90834002615802
+            ]
+          },
+          "async_versus_serial_e2e_ms": {
+            "median_reduction_percent": 0.09878549006629989,
+            "favorable_blocks": 6,
+            "paired_reductions": [
+              -0.12945893191360636,
+              0.09583061562390416,
+              0.041170859065131626,
+              0.1102450000502242,
+              0.09878549006629989,
+              0.21867680471057138,
+              0.19810819214990394
+            ]
+          },
+          "async_versus_serial_wall_ms": {
+            "median_reduction_percent": 0.09659103705241812,
+            "favorable_blocks": 6,
+            "paired_reductions": [
+              -0.12369141246078019,
+              0.08437592333848665,
+              0.03683130510602206,
+              0.12156231660604977,
+              0.09659103705241812,
+              0.21601378883978617,
+              0.20571754630521744
+            ]
+          }
+        },
+        {
+          "path": 4,
+          "serialized": 0,
+          "bytes": 512,
+          "fragments": 32,
+          "work": 1024,
+          "versus_legacy_e2e_ms": {
+            "median_reduction_percent": 34.45664938868218,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              34.45664938868218,
+              34.46559813190305,
+              34.453508792161024,
+              34.45677706725178,
+              34.45137270083936,
+              34.467671526233424,
+              34.379236335424714
+            ]
+          },
+          "versus_legacy_wall_ms": {
+            "median_reduction_percent": 34.409726907500456,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              34.409726907500456,
+              34.423412703083144,
+              34.410054174674485,
+              34.4070487748688,
+              34.408515133428274,
+              34.42437764842422,
+              34.33338002701378
+            ]
+          },
+          "async_versus_serial_e2e_ms": {
+            "median_reduction_percent": 18.133867646423518,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              18.157624120768368,
+              18.133867646423518,
+              18.126165204973177,
+              18.085544410955734,
+              18.134514607153072,
+              18.15554014825298,
+              18.030381903364734
+            ]
+          },
+          "async_versus_serial_wall_ms": {
+            "median_reduction_percent": 18.102944633102847,
+            "favorable_blocks": 7,
+            "paired_reductions": [
+              18.126938192784603,
+              18.102944633102847,
+              18.08951203724165,
+              18.053842212081538,
+              18.108024347022745,
+              18.12590416577713,
+              18.001671786743568
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

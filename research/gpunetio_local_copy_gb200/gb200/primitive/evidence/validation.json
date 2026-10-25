@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-25",
+  "review_repository": "foraxe/nixl",
+  "base_branch": "gpunetio/kernel-local-copy-gb200-20261024",
+  "base_commit": "65a2c9b3c8686d7496aa658e2f650cfb8f164f44",
+  "scope": "thin GPU-callable primitive; not NIXL dispatch or model throughput",
+  "core_source_equivalence": "local_copy.cuh and kernel_copy.cuh byte-identical to validated local checkpoint 8fb61c5",
+  "packaging": "control helpers relocated locally; no unrelated GIN/TMA study code",
+  "packaged_source_rerun": "PASS",
+  "measured_kernels": 18900,
+  "validated_warmups": 6300,
+  "core_regressions": "PASS",
+  "reset_failure_quarantine": "PASS",
+  "facade_fault_and_timeout_contracts": "PASS",
+  "independent_source_review": "PASS",
+  "publication_intent": "draft PR to user repository only; upstream requires later explicit approval"
+}

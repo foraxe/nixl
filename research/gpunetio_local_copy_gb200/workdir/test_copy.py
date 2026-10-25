@@ -19,7 +19,7 @@ def run(args):
         dst = torch.empty(256 + count * (size + 32), dtype=torch.uint8, device=f"cuda:{args.gpu}")
         values = ((torch.arange(src.numel(), dtype=torch.int64) * 17 + epoch * 31) % 251).byte()
         src.copy_(values)
-        with LocalCopy(src, dst) as copy:
+        with LocalCopy(src, dst, nic=args.nic, gid=args.gid, library=args.library) as copy:
             probe = copy.lib.lc_probe
             probe.argtypes = [C.c_void_p, C.c_void_p, C.c_void_p, C.c_size_t,
                               C.c_int, C.c_int, C.c_int, C.c_int, C.c_int,
@@ -59,7 +59,7 @@ def run(args):
         dst = torch.empty_like(src, device=f"cuda:{args.gpu}")
         result = torch.zeros(16, dtype=torch.int64, device=dst.device)
         extra = []
-        with LocalCopy(src, dst) as copy:
+        with LocalCopy(src, dst, nic=args.nic, gid=args.gid, library=args.library) as copy:
             probe = copy.lib.lc_probe
             probe.argtypes = [C.c_void_p, C.c_void_p, C.c_void_p, C.c_size_t,
                               C.c_int, C.c_int, C.c_int, C.c_int, C.c_int,
@@ -104,5 +104,8 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu", type=int, default=7)
+    parser.add_argument("--nic", default="mlx5_bond_0")
+    parser.add_argument("--gid", type=int, default=3)
+    parser.add_argument("--library")
     parser.add_argument("--owner-only", action="store_true")
     run(parser.parse_args())

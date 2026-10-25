@@ -1,0 +1,5 @@
+CUDA_VERSION=13.1.0
+CUDA_VISIBLE_DEVICES=0
+DIRECT_COPY_LIBRARY=/workspace/gpunetio/kernel-copy-tools/primitive-prreview/liblocal_copy.so
+LD_LIBRARY_PATH=/workspace/gpunetio/kernel-copy-tools/primitive-prreview:/workspace/gpunetio/kernel-copy-tools/e/install/lib/aarch64-linux-gnu/plugins:/workspace/gpunetio/kernel-copy-tools/e/install/lib/aarch64-linux-gnu:/workspace/gpunetio/kernel-copy-tools/doca35/root/opt/mellanox/doca/lib/aarch64-linux-gnu:/workspace/gpunetio/kernel-copy-tools/doca35/root/usr/lib/aarch64-linux-gnu:/usr/local/cuda/lib64:/workspace/gpunetio/nccl-core-workload/build/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64
+PRIMITIVE_BUILD_SUFFIX=-prreview
