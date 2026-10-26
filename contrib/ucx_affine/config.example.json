@@ -1,0 +1,50 @@
+{
+  "pairs": 5,
+  "iterations": 300,
+  "warmup": 20,
+  "min_free_mib": 4096,
+  "receiver_ip": "RECEIVER_IP",
+  "control_port": 18080,
+  "device": "RDMA_DEVICE",
+  "interface": "OOB_INTERFACE",
+  "gid_index": 0,
+  "sender": {
+    "shell_prefix": ["kubectl", "-n", "NAMESPACE", "exec", "SENDER_POD", "--"],
+    "executable": "/PATH/TO/ucx_affine/replay",
+    "gpu": 0,
+    "cpu": 0,
+    "oob_port": 18040,
+    "baseline_plugin_dir": "/PATH/TO/BASELINE/plugins",
+    "affine_plugin_dir": "/PATH/TO/AFFINE/plugins",
+    "identity_files": [
+      "/PATH/TO/NIXL/libnixl.so",
+      "/PATH/TO/NIXL/libnixl_build.so",
+      "/PATH/TO/UCX/lib/libucp.so.0"
+    ],
+    "env": {
+      "LD_LIBRARY_PATH": "/PATH/TO/NIXL:/PATH/TO/UCX/lib:/PATH/TO/CUDA/lib64",
+      "UCX_MODULE_DIR": "/PATH/TO/UCX/lib/ucx",
+      "UCX_NET_DEVICES": "RDMA_DEVICE:1",
+      "UCX_IB_GID_INDEX": "0"
+    }
+  },
+  "receiver": {
+    "shell_prefix": ["kubectl", "-n", "NAMESPACE", "exec", "RECEIVER_POD", "--"],
+    "executable": "/PATH/TO/ucx_affine/replay",
+    "gpu": 0,
+    "cpu": 0,
+    "oob_port": 18050,
+    "plugin_dir": "/PATH/TO/BASELINE/plugins",
+    "identity_files": [
+      "/PATH/TO/NIXL/libnixl.so",
+      "/PATH/TO/NIXL/libnixl_build.so",
+      "/PATH/TO/UCX/lib/libucp.so.0"
+    ],
+    "env": {
+      "LD_LIBRARY_PATH": "/PATH/TO/NIXL:/PATH/TO/UCX/lib:/PATH/TO/CUDA/lib64",
+      "UCX_MODULE_DIR": "/PATH/TO/UCX/lib/ucx",
+      "UCX_NET_DEVICES": "RDMA_DEVICE:1",
+      "UCX_IB_GID_INDEX": "0"
+    }
+  }
+}
