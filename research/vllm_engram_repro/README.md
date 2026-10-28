@@ -10,8 +10,10 @@ alongside a different NIXL core or plugin.
 The checked-in M1, shim and Python sources reproduce the research stack's
 functionality. The new build described below has passed single-node synthetic
 M1A and ABI-3 row-READ tests, and a cross-node ABI-3 synthetic row-READ test,
-on H20. vLLM testing of a fresh build is still open. Earlier measurements used a separately built shim,
-so these build results do not independently reproduce their performance.
+on H20. A fresh build was also used for a real H20 TP4/TP4 1P1D vLLM run:
+two sets of eight greedy prompts matched the local-table control, and a
+32-request C4 performance run completed. One sequential pair is insufficient
+to claim a stable speedup or tail improvement.
 Do not include production weights, endpoints, credentials, logs or metadata
 in a public report.
 
@@ -117,13 +119,140 @@ manual coordination, not the owner lease protocol; do not stop the owner
 while a reader may still access its memory. It validates 32 packed rows and
 completion count on synthetic data, with a host copy for checking results.
 
-## Further validation
+## Real model and 1P1D study
 
-`cross_node_smoke.py` contains separate synthetic owner and reader roles;
-`real_checkpoint_owner_mmap.py`, `real_checkpoint_read_smoke.py`, the adapter
-and `launch_pd_role.py` show the real-checkpoint/vLLM study path. They require
-PyTorch with CUDA, Triton and the pinned vLLM integration branch in addition
-to this runtime. Exchange the generated owner ready file securely and keep it
-private: it is operational metadata. These are not yet a verified
-fresh-build 1P1D reproduction. Validate resource retirement and
-one owner generation before treating any result as equivalent to the study.
+The tested setup had two H20 nodes, four GPUs each for P and D, and a fifth P
+GPU for the owner. The owner backed both packed tables with one pinned Host
+allocation (188.83 GiB for the tested checkpoint). Ensure sufficient Host RAM
+and locked-memory allowance; use one fully matching checkpoint on both nodes.
+Inputs, user output, RDMA keys and checkpoint bytes are not included here.
+
+Use the vLLM integration at [fc092117f3](https://github.com/foraxe/vllm/tree/fc092117f3)
+or its successor, with CUDA PyTorch, Triton and the dependencies for the
+existing P/D KV connector installed on both endpoints. The tested workers
+used vLLM `0.33.0rc1.dev185+g65faf4efa`, PyTorch 2.14.0+cu130, eager mode,
+Marlin MXFP8 linear and Triton-unfused MXFP4 MoE. The owner used system
+PyTorch 2.11.0+cu130. A compatible CUDA 12 runtime is required for this shim
+even when the vLLM workers use CUDA 13. These are experimental, mixed-version
+settings; other software/hardware combinations have not been qualified.
+
+On **both** nodes, export the paths below from the corresponding local build;
+use matching NIXL core and plugin libraries, and set the RDMA device, GID,
+interface and `VLLM_HOST_IP` for the local topology. Unset any inherited
+`ENGRAM_SHARED_*` variables. Do not put real addresses or keys in logs that
+will be published.
+
+```bash
+export NIXL_SOURCE="$PWD"  # root of this research checkout
+export SHIM="$WORK/build/research/engram_shared_rdma_m2/libengram_native.so"
+export NIXL_PLUGIN_DIR="$WORK/build/src/plugins/gpunetio"
+export PYTHONPATH="$NIXL_SOURCE/research/engram_shared_rdma_m2:$NIXL_SOURCE/research/vllm_engram_repro:${PYTHONPATH:-}"
+export LD_LIBRARY_PATH="$WORK/absl/lib:$WORK/build/src/core:$WORK/build/src/infra:$WORK/build/src/utils/device:$WORK/build/src/utils/common:$WORK/build/src/utils/serdes:$WORK/build/src/utils/stream:${LD_LIBRARY_PATH:-}"
+export GPUNETIO_DEVICE_API_RDMA="<rdma-device>"
+export GPUNETIO_DEVICE_API_GID_INDEX="<gid-index>"
+export GPUNETIO_DEVICE_API_OOB_INTERFACE="<network-interface>"
+export VLLM_HOST_IP="<this-node-address>"
+export NCCL_SOCKET_IFNAME="<network-interface>"
+export VLLM_ALLREDUCE_USE_SYMM_MEM=0 VLLM_ALLREDUCE_USE_FLASHINFER=0
+```
+
+Start the owner on the P node using a dedicated assigned GPU. Use fresh paths
+and an unused RDMA/control port, and set the advertised address to a trusted
+network interface. The owner control protocol is not authenticated and must be
+restricted to a trusted environment. Keep the generated metadata file private.
+
+```bash
+CUDA_VISIBLE_DEVICES="<owner-gpu-id>" python3 research/vllm_engram_repro/real_checkpoint_owner_mmap.py \
+  --checkpoint "$MODEL" --library "$SHIM" --owner-gpu 0 \
+  --rdma-port "$OWNER_RDMA_PORT" --control-host 0.0.0.0 \
+  --advertise-host "$P_HOST" --control-port "$OWNER_CONTROL_PORT" \
+  --ready-file "$WORK/owner.private.json" --stop-file "$WORK/owner.stop" \
+  --max-pinned-gib 190 --storage-layout row264
+```
+
+After `owner ready`, securely copy its ready file to the D node. On each node,
+activate the vLLM Python environment and run the corresponding command below
+with a unique reader-port base; with one READ lane the four local GPU ranks use
+base, base+4, base+8 and base+12. `$MODEL` must point to the same
+checkpoint content on both nodes, and `$P_GPU_IDS` / `$D_GPU_IDS` each list
+four assigned GPUs. The helper uses the vLLM example's existing P/D KV
+connector; the Engram reads use this branch's GPUNetIO shim.
+
+```bash
+export PYTORCH_ALLOC_CONF=pinned_max_round_threshold_mb:1024,pinned_max_cached_size_mb:1024
+# P node
+python3 research/vllm_engram_repro/launch_pd_role.py --role prefill --mode remote \
+  --model "$MODEL" --host 0.0.0.0 --port "$P_HTTP_PORT" --devices "$P_GPU_IDS" --tp 4 \
+  --ready "$WORK/owner.private.json" --library "$SHIM" \
+  --reader-port-base "$P_READER_PORT_BASE" --rdma-device "$GPUNETIO_DEVICE_API_RDMA" \
+  --extra=--disable-custom-all-reduce --extra=--kernel-config \
+  --extra='{"moe_backend":"triton_unfused","linear_backend_per_quant":{"mxfp8":"marlin"}}'
+# D node
+python3 research/vllm_engram_repro/launch_pd_role.py --role decode --mode remote \
+  --model "$MODEL" --host 0.0.0.0 --port "$D_HTTP_PORT" --devices "$D_GPU_IDS" --tp 4 \
+  --ready "$WORK/owner.private.json" --library "$SHIM" \
+  --reader-port-base "$D_READER_PORT_BASE" --rdma-device "$GPUNETIO_DEVICE_API_RDMA" \
+  --extra=--disable-custom-all-reduce --extra=--kernel-config \
+  --extra='{"moe_backend":"triton_unfused","linear_backend_per_quant":{"mxfp8":"marlin"}}'
+```
+
+The helper currently fixes GID 3 and OOB interface `eth0` when launching a
+remote worker; change those explicit values for another topology. For a local
+table control, replace `--mode remote` with `--mode native` and omit the ready,
+library, reader-port and RDMA options. Keep every other model, P/D, allocator,
+kernel and workload setting the same.
+
+Start the vLLM checkout's P/D proxy using the endpoints and KV bootstrap port
+appropriate for the deployment. For example, in the vLLM environment:
+
+```bash
+python "$VLLM_ROOT/examples/disaggregated/mooncake_connector/mooncake_connector_proxy.py" \
+  --host 0.0.0.0 --port "$PROXY_PORT" \
+  --prefill "http://$P_HOST:$P_HTTP_PORT" "$P_KV_BOOTSTRAP_PORT" \
+  --decode "http://$D_HOST:$D_HTTP_PORT"
+```
+
+Against its `$PROXY_URL`, run the same two sets of synthetic greedy prompts on
+each arm, saving the local and remote result files under different names:
+
+```bash
+python3 research/vllm_engram_repro/greedy_canary.py --url "$PROXY_URL" \
+  --model engram-model --cache-salt-prefix run-a --out "$WORK/greedy-a.json"
+python3 research/vllm_engram_repro/greedy_canary.py --url "$PROXY_URL" \
+  --model engram-model --cache-salt-prefix run-b --out "$WORK/greedy-b.json"
+vllm bench serve --backend openai --base-url "$PROXY_URL" --endpoint /v1/completions \
+  --model engram-model --tokenizer "$MODEL" --dataset-name random \
+  --random-input-len 512 --random-output-len 64 --num-prompts 32 \
+  --max-concurrency 4 --num-warmups 4 --seed 2026 --ignore-eos \
+  --save-result --save-detailed --percentile-metrics ttft,tpot,itl,e2el \
+  --metric-percentiles 50,90,99
+```
+
+Compare output hashes and prompt/output counts for both local and remote
+canaries, for example:
+
+```bash
+python3 - "$NATIVE_CANARY" "$REMOTE_CANARY" <<'PY'
+import json, sys
+with open(sys.argv[1]) as f:
+    native = json.load(f)
+with open(sys.argv[2]) as f:
+    remote = json.load(f)
+assert len(native) == len(remote) == 8
+assert native == remote, "greedy outputs or token counts differ"
+print("8/8 greedy outputs and token counts match")
+PY
+```
+
+Also compare each arm's two repeat files. Retain complete benchmark samples rather than filtering warm or slow
+requests. The detailed output includes generated text and must remain private.
+Eight greedy prompts and 32 measured requests are only a smoke/performance
+study, not full accuracy, production p99, or multi-run speedup evidence. A
+565-token native-only logprob comparison still showed differences after
+position 512 even when the tested greedy outputs matched.
+
+Stop both vLLM roles gracefully with a nonzero shutdown timeout, confirm all
+reader leases are released, then create `$WORK/owner.stop` and wait for owner
+exit before freeing its backing. Forced termination, cancellation and recovery
+remain open work. `cross_node_smoke.py` and `real_checkpoint_read_smoke.py`
+provide additional synthetic and real-row checks.
