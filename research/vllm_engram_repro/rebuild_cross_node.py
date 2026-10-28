@@ -9,6 +9,7 @@ import argparse
 import base64
 import ctypes as c
 import json
+import os
 import time
 from pathlib import Path
 
@@ -73,10 +74,10 @@ try:
         size = ok(lib.engram_metadata(context, None, 0), "metadata size")
         metadata = c.create_string_buffer(size)
         ok(lib.engram_metadata(context, metadata, size), "metadata")
-        with a.metadata.open("x") as f:
+        fd = os.open(a.metadata, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w") as f:
             json.dump({"md": base64.b64encode(metadata.raw).decode(),
                        "address": table.value, "length": rows * width}, f)
-        a.metadata.chmod(0o600)
         print("OWNER_READY", flush=True)
         deadline = time.monotonic() + a.timeout
         while not a.stop.exists():
