@@ -1,0 +1,28 @@
+research/engram_shared_rdma_m2/PEER_RETIRE_RESEARCH.md
+  h_0e76ee63339d76 1-14
+research/engram_shared_rdma_m2/engram_native.cu
+  h_0e76ee63339d76 6-7,766-783
+src/core/agent_data.h
+  h_0e76ee63339d76 160-162
+src/plugins/gpunetio/gpunetio_backend.cpp
+  h_0e76ee63339d76 1336-1361
+src/plugins/gpunetio/gpunetio_backend.h
+  h_0e76ee63339d76 32,50-51
+src/plugins/gpunetio/gpunetio_utils.cpp
+  h_0e76ee63339d76 459-460
+src/plugins/gpunetio/verbs/verbs.cpp
+  h_0e76ee63339d76 148-153,267-268,275,284,293,302,311,320,324,403-405,549-550,557,566,575,584,593,602,606
+src/plugins/gpunetio/verbs/verbs.h
+  h_0e76ee63339d76 58,69-70,124-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f89cdaa23a60d92c2a29370d80f2120565973740",
+  "prompts": {},
+  "humans": {
+    "h_0e76ee63339d76": {
+      "author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
