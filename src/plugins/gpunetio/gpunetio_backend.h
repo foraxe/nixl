@@ -29,6 +29,7 @@ public:
     mutable std::mutex notifLock;
     mutable std::mutex qpLock;
     std::mutex connectLock;
+    std::mutex researchPeerSetupLock;
     mutable std::mutex remoteConnLock;
     std::vector<std::pair<uint32_t, doca_gpu *>> gdevs; /* List of DOCA GPUNetIO device handlers */
     doca_dev *ddev = nullptr; /* DOCA device handler associated to queues */
@@ -46,6 +47,8 @@ public:
 
     nixl_status_t
     addRdmaQp(const std::string &remote_agent);
+    // Only after the remote reader has drained and destroyed this peer.
+    nixl_status_t retireIdlePeer(const std::string &remote_agent);
     nixl_status_t
     connectServerRdmaQp(int oob_sock_client, const std::string &remote_agent);
     nixl_status_t

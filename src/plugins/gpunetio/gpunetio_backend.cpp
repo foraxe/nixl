@@ -1333,6 +1333,32 @@ nixlDocaEngine::connect(const std::string &remote_agent) {
     return NIXL_SUCCESS;
 }
 
+// Research-only: callers must prove remote work and setup have terminated, and
+// must prevent reconnection of this unique peer while retirement is in progress.
+nixl_status_t
+nixlDocaEngine::retireIdlePeer(const std::string &remote_agent) {
+    if (!nativeMode_) return NIXL_ERR_NOT_SUPPORTED;
+    cudaDeviceGuard guard(gdevs[0].first);
+    if (guard.status() != cudaSuccess) return NIXL_ERR_BACKEND;
+    std::lock_guard<std::mutex> setup_lock(researchPeerSetupLock);
+    std::scoped_lock lock(connectLock, qpLock);
+    auto it = qpMap.find(remote_agent);
+    if (it == qpMap.end()) return NIXL_SUCCESS; // retry is idempotent
+    auto *qp = it->second;
+    if (!qp->qp_data->close() || !qp->qp_notif->close()) return NIXL_ERR_BACKEND;
+    delete qp;
+    qpMap.erase(it);
+    connMap.erase(remote_agent);
+    return NIXL_SUCCESS;
+}
+
+extern "C" nixl_status_t
+research_gpunetio_retire_idle_peer(nixlBackendEngine *engine, const char *peer) {
+    auto *gpunetio = dynamic_cast<nixlDocaEngine *>(engine);
+    if (!gpunetio || !peer || !*peer) return NIXL_ERR_INVALID_PARAM;
+    return gpunetio->retireIdlePeer(peer);
+}
+
 nixl_status_t
 nixlDocaEngine::disconnect(const std::string &remote_agent) {
     // Disconnection should be handled here

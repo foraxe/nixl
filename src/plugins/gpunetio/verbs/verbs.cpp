@@ -145,7 +145,12 @@ cq::cq(doca_gpu *gpu_dev_,
 }
 
 cq::~cq() {
-    destroyCq();
+    (void)close();
+}
+
+bool
+cq::close() noexcept {
+    return destroyCq();
 }
 
 doca_verbs_cq *
@@ -259,14 +264,15 @@ cq::createCq() {
     return new_cq;
 }
 
-void
-cq::destroyCq() {
+bool
+cq::destroyCq() noexcept {
     doca_error_t status;
 
     if (cq_verbs != nullptr) {
         status = doca_verbs_cq_destroy(cq_verbs);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy doca verbs CQ";
+            return false;
         }
         cq_verbs = nullptr;
     }
@@ -275,6 +281,7 @@ cq::destroyCq() {
         status = doca_uar_destroy(external_uar);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu external_uar";
+            return false;
         }
         external_uar = nullptr;
     }
@@ -283,6 +290,7 @@ cq::destroyCq() {
         status = doca_umem_destroy(cq_umem);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu cq_umem";
+            return false;
         }
         cq_umem = nullptr;
     }
@@ -291,6 +299,7 @@ cq::destroyCq() {
         status = doca_gpu_mem_free(gpu_dev, cq_umem_gpu_ptr);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu memory of cq_umem_gpu_ptr";
+            return false;
         }
         cq_umem_gpu_ptr = nullptr;
     }
@@ -299,6 +308,7 @@ cq::destroyCq() {
         status = doca_umem_destroy(cq_umem_dbr);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu cq_umem_dbr";
+            return false;
         }
         cq_umem_dbr = nullptr;
     }
@@ -307,9 +317,11 @@ cq::destroyCq() {
         status = doca_gpu_mem_free(gpu_dev, cq_umem_dbr_gpu_ptr);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu cq_umem_dbr_gpu_ptr";
+            return false;
         }
         cq_umem_dbr_gpu_ptr = nullptr;
     }
+    return true;
 }
 
 qp::qp(doca_gpu *gpu_dev_,
@@ -388,7 +400,9 @@ qp::close() noexcept {
         qp_gdev_verbs = nullptr;
     }
 
-    destroyQp();
+    if (!destroyQp()) return false;
+    if (cq_rq && !cq_rq->close()) return false;
+    if (cq_sq && !cq_sq->close()) return false;
     cq_rq.reset();
     cq_sq.reset();
     return true;
@@ -532,14 +546,15 @@ qp::createQp() {
     return qp_verbs;
 }
 
-void
-qp::destroyQp() {
+bool
+qp::destroyQp() noexcept {
     doca_error_t status;
 
     if (qp_verbs != nullptr) {
         status = doca_verbs_qp_destroy(qp_verbs);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy doca verbs QP";
+            return false;
         }
         qp_verbs = nullptr;
     }
@@ -548,6 +563,7 @@ qp::destroyQp() {
         status = doca_uar_destroy(external_uar);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu external_uar";
+            return false;
         }
         external_uar = nullptr;
     }
@@ -556,6 +572,7 @@ qp::destroyQp() {
         status = doca_umem_destroy(qp_umem);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu qp umem";
+            return false;
         }
         qp_umem = nullptr;
     }
@@ -564,6 +581,7 @@ qp::destroyQp() {
         status = doca_gpu_mem_free(gpu_dev, qp_umem_gpu_ptr);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu memory of qp ring buffer";
+            return false;
         }
         qp_umem_gpu_ptr = nullptr;
     }
@@ -572,6 +590,7 @@ qp::destroyQp() {
         status = doca_umem_destroy(qp_umem_dbr);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu qp umem dbr";
+            return false;
         }
         qp_umem_dbr = nullptr;
     }
@@ -580,9 +599,11 @@ qp::destroyQp() {
         status = doca_gpu_mem_free(gpu_dev, qp_umem_dbr_gpu_ptr);
         if (status != DOCA_SUCCESS) {
             NIXL_ERROR << "Failed to destroy gpu memory of qp dbr";
+            return false;
         }
         qp_umem_dbr_gpu_ptr = nullptr;
     }
+    return true;
 }
 
 mr::mr(doca_gpu *gpu_dev_, void *addr_, uint32_t elem_num_, size_t elem_size_, struct ibv_pd *pd_)

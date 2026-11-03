@@ -157,6 +157,9 @@ class nixlBackendH {
     public:
         ~nixlBackendH() = default;
 
+        // Research-only access for explicit quiesced owner peer retirement.
+        nixlBackendEngine *researchEngine() const noexcept { return engine; }
+
         // TODO? engine->getType() returns a const nixl_backend_t&
         nixl_backend_t
         getType() const noexcept {

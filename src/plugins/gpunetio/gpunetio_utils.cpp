@@ -456,6 +456,8 @@ threadProgressFunc(void *arg) {
 
         remote_agent.clear();
         nixl_status_t status = eng->recvRemoteAgentName(oob_sock_client, remote_agent);
+        // Serialize server-side peer setup against explicit quiesced retirement.
+        std::lock_guard<std::mutex> peer_setup(eng->researchPeerSetupLock);
         if (status == NIXL_SUCCESS) {
             status = eng->addRdmaQp(remote_agent);
         }

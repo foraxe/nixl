@@ -3,6 +3,8 @@
 #include <cuda_runtime.h>
 #include <gpu/nixl_device.cuh>
 #include <nixl.h>
+#include "agent_data.h"
+#include <dlfcn.h>
 #include "../gpu_remote_kv/experimental_get.cuh"
 
 #include <algorithm>
@@ -759,6 +761,24 @@ extern "C" int engram_test_corrupt_remote_key(void *handle) {
         check(cudaMemcpy(&elem, view.elems, sizeof(elem), cudaMemcpyDeviceToHost), "read test key");
         elem.key ^= 0x7fff0000u;
         check(cudaMemcpy(const_cast<nixl::gpu::impl::gpunetio::GpunetioViewElem *>(view.elems), &elem, sizeof(elem), cudaMemcpyHostToDevice), "install test bad key");
+    });
+}
+// Research-only owner API. Peer must already be quiesced and disconnected.
+extern "C" int engram_retire_idle_peer(void *handle, const char *peer) {
+    return guarded([&] {
+        auto &c = *static_cast<Context *>(handle);
+        check(cudaSetDevice(c.gpu), "select owner device");
+        const char *dir = std::getenv("NIXL_PLUGIN_DIR");
+        if (!dir || !peer || !*peer) throw std::runtime_error("missing plugin directory or peer");
+        const auto path = std::string(dir) + "/libplugin_GPUNETIO.so";
+        void *plugin = dlopen(path.c_str(), RTLD_NOW | RTLD_NOLOAD);
+        if (!plugin) throw std::runtime_error("GPUNETIO plugin not loaded at configured path");
+        using Retire = nixl_status_t (*)(nixlBackendEngine *, const char *);
+        auto fn = reinterpret_cast<Retire>(dlsym(plugin, "research_gpunetio_retire_idle_peer"));
+        if (!fn) { dlclose(plugin); throw std::runtime_error("plugin lacks peer retirement"); }
+        auto status = fn(c.backend->researchEngine(), peer);
+        dlclose(plugin);
+        require(status, "retire owner peer");
     });
 }
 extern "C" int engram_destroy(void *handle) {

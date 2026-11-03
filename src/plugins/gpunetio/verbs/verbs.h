@@ -55,6 +55,7 @@ public:
        doca_verbs_pd *verbs_pd,
        uint16_t ncqe);
     ~cq();
+    bool close() noexcept;
 
     [[nodiscard]] doca_verbs_cq *
     get_cq() const {
@@ -65,8 +66,8 @@ private:
     [[nodiscard]] doca_verbs_cq *
     createCq();
 
-    void
-    destroyCq();
+    bool
+    destroyCq() noexcept;
 
     doca_gpu *gpu_dev;
     doca_dev *dev;
@@ -120,8 +121,8 @@ private:
     [[nodiscard]] doca_verbs_qp *
     createQp();
 
-    void
-    destroyQp();
+    bool
+    destroyQp() noexcept;
 
     doca_gpu *gpu_dev;
     doca_dev *dev;
