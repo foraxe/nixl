@@ -1,0 +1,23 @@
+research/gpunetio_doca35_component/component_samples.json
+  s_f4ecdc97fbe5c3::t_8059b8224919e8 1-689
+research/gpunetio_doca35_component/summarize_results.py
+  s_f4ecdc97fbe5c3::t_8059b8224919e8 1-52
+research/gpunetio_doca35_component/RESULTS.md
+  s_f4ecdc97fbe5c3::t_d5f9c88878a9ca 26-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "08c6c2fe26093c2ab8a29f9c66c98e0adb1f622d",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
