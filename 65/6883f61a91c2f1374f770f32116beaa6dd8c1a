@@ -1,0 +1,42 @@
+research/gpunetio_doca35_component/README.md
+  s_f4ecdc97fbe5c3::t_5d5c568a62813a 1-26,29-85
+  s_f4ecdc97fbe5c3::t_31961b746f5312 27-28
+research/gpunetio_doca35_component/RESULTS.md
+  s_f4ecdc97fbe5c3::t_31961b746f5312 1-37
+research/gpunetio_doca35_component/bench_native_host.py
+  s_f4ecdc97fbe5c3::t_4903a62ec6ca37 1-218
+research/gpunetio_doca35_component/bench_read_lanes.py
+  s_f4ecdc97fbe5c3::t_f155ef70a4845e 1-206
+research/gpunetio_doca35_component/benchmark_vllm_context_onegpu.py
+  s_f4ecdc97fbe5c3::t_b49abb0b907d5d 1-34
+research/gpunetio_doca35_component/build_engram_native_nixl35.sh
+  s_f4ecdc97fbe5c3::t_828de4eea561c1 1-21
+research/gpunetio_doca35_component/dedup_rows.py
+  s_f4ecdc97fbe5c3::t_b5c3a0568d4555 1-29
+research/gpunetio_doca35_component/engram_native_nixl35.cu
+  s_f4ecdc97fbe5c3::t_d1a6198243d2fe 1-754
+research/gpunetio_doca35_component/make_ids.py
+  s_f4ecdc97fbe5c3::t_5129eab69446a7 1-19
+research/gpunetio_doca35_component/read_group.py
+  s_f4ecdc97fbe5c3::t_213354c60270fd 1-77
+research/gpunetio_doca35_component/read_lanes.py
+  s_f4ecdc97fbe5c3::t_ff7de4c0cef5ee 1-64
+research/gpunetio_doca35_component/vllm_runtime.py
+  s_f4ecdc97fbe5c3::t_8374dab3592cb5 1-423
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "656883f61a91c2f1374f770f32116beaa6dd8c1a",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
