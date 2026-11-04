@@ -1,0 +1,44 @@
+research/gpunetio_doca35_component/real_checkpoint/sglang_support/read_plan.py
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-80
+research/gpunetio_doca35_component/real_checkpoint/sglang_source_baseline/new2.json
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-640
+research/gpunetio_doca35_component/real_checkpoint/sglang_source_baseline/new3.json
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-640
+research/gpunetio_doca35_component/real_checkpoint/sglang_support/owner_control.py
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-232
+research/gpunetio_doca35_component/real_checkpoint/sglang_source_baseline/old2.json
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-640
+research/gpunetio_doca35_component/real_checkpoint/prepare_sglang_support.sh
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-12
+research/gpunetio_doca35_component/real_checkpoint/sglang_real_rows_benchmark.py
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-106
+research/gpunetio_doca35_component/real_checkpoint/sglang_source_baseline/old1.json
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-640
+research/gpunetio_doca35_component/real_checkpoint/sglang_support/shared_model_adapter.py
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-440
+research/gpunetio_doca35_component/real_checkpoint/RESULTS.md
+  s_f4ecdc97fbe5c3::t_4d9314eed2ec4d 115-116,118
+  s_f4ecdc97fbe5c3::t_d5ee04dff1433c 101-114,117,119-152
+research/gpunetio_doca35_component/real_checkpoint/sglang_source_baseline/old3.json
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-640
+research/gpunetio_doca35_component/real_checkpoint/sglang_source_baseline/new1.json
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-640
+research/gpunetio_doca35_component/real_checkpoint/sglang_support/real_checkpoint_owner.py
+  s_f4ecdc97fbe5c3::t_ac1634e78292d0 1-517
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fa39796277f2332b538a597f97c75efcee921c09",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
