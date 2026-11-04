@@ -71,3 +71,30 @@ were bypassed, with little event-time change; samples are in
 [`prepare_underfeed/`](prepare_underfeed/). The unchecked build is a test-only
 ablation and is not a safe fix. The remaining device-path cost and full-model
 performance remain unproven.
+
+## Source-pinned 3.1 adapter comparison
+
+The earlier 3.1 baseline binary's exact source was unknown. A 3.1 adapter was
+rebuilt with CUDA 13 and DOCA 3.1.0105 headers from sources byte-identical in the
+used paths to public NIXL research snapshot
+[`b5322e46`](https://github.com/foraxe/nixl/tree/b5322e46f6e686ff16bdb3afb8a1a940a64e1163).
+Its SHA256 was `7b0a39417f70c78e4af0b8a86be963b24d7f0c47194964ec4563758bd736907c`.
+It linked against the retained 3.1 core/plugin binaries, whose exact source
+provenance is not established; this is not a source rebuild of the full stack.
+
+A same-owner, three-pair actual-checkpoint comparison between that build and
+the earlier 3.1 binary found queued-event median differences between -0.19%
+and +0.35%, with data and completion checks passing. This supports its use as
+a bounded comparison baseline, but does not prove binary source identity.
+Raw results are in [`legacy_source_check/`](legacy_source_check/).
+
+Using the source-built 3.1 reader versus the 3.5 reader, with one fixed 3.1
+owner and three balanced-order pairs, 384-row queued-event median changes were
++3.02%, +2.80%, +4.47% for layer 1 and +3.42%, +2.66%, +3.88% for layer 14.
+All are below the 5% component threshold in this experiment. The 3.5 native
+GET kernel remained about 3–4 µs slower, while ordinary event changes ranged
+from -1.14% to +3.35%. All six reader processes passed byte/completion checks
+and released their leases. Results are in [`source_baseline/`](source_baseline/).
+This mixed-SDK, same-host result does not establish general inter-version
+compatibility or full-model serving performance; the implementations, SDKs and
+linked core/plugin stacks still differ.
