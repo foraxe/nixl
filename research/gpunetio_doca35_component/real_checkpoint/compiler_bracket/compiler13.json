@@ -1,0 +1,444 @@
+{
+  "library_sha256": "af9d6fddce62966d99581d52cac27c20913dc671b9aebbcb3766c13967ef7743",
+  "checkpoint": "sha256:8e82061d8b3f9ef0124d672354e4c7d545cbfdc7cbd2d5fdd9a0b9846951168e",
+  "warmups": 3,
+  "samples_per_mode": 15,
+  "results": [
+    {
+      "layer": 1,
+      "queries": 384,
+      "unique_rows": 384,
+      "samples": [
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 208.861,
+          "gpu_event_us": 229.5680046081543,
+          "kernel_ns": 101184
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 215.475,
+          "gpu_event_us": 134.62400436401367,
+          "kernel_ns": 109184
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 163.549,
+          "gpu_event_us": 125.76000392436981,
+          "kernel_ns": 100768
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 147.096,
+          "gpu_event_us": 191.77600741386414,
+          "kernel_ns": 100704
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 137.138,
+          "gpu_event_us": 186.97600066661835,
+          "kernel_ns": 101600
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 133.656,
+          "gpu_event_us": 126.0479986667633,
+          "kernel_ns": 101152
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 134.807,
+          "gpu_event_us": 126.56000256538391,
+          "kernel_ns": 101472
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 136.782,
+          "gpu_event_us": 186.88000738620758,
+          "kernel_ns": 100736
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 144.564,
+          "gpu_event_us": 190.65600633621216,
+          "kernel_ns": 100064
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 134.517,
+          "gpu_event_us": 125.72799623012543,
+          "kernel_ns": 100640
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 134.494,
+          "gpu_event_us": 125.5359947681427,
+          "kernel_ns": 100288
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 131.6,
+          "gpu_event_us": 182.8799992799759,
+          "kernel_ns": 100928
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 128.871,
+          "gpu_event_us": 181.15200102329254,
+          "kernel_ns": 100736
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 130.347,
+          "gpu_event_us": 126.01600587368011,
+          "kernel_ns": 100800
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 129.663,
+          "gpu_event_us": 126.20800733566284,
+          "kernel_ns": 101376
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 127.858,
+          "gpu_event_us": 180.95999956130981,
+          "kernel_ns": 100640
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 124.755,
+          "gpu_event_us": 178.65599691867828,
+          "kernel_ns": 100576
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 131.376,
+          "gpu_event_us": 125.66399574279785,
+          "kernel_ns": 100448
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 129.576,
+          "gpu_event_us": 125.44000148773193,
+          "kernel_ns": 100064
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 129.557,
+          "gpu_event_us": 181.5679967403412,
+          "kernel_ns": 101312
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 129.924,
+          "gpu_event_us": 181.40800297260284,
+          "kernel_ns": 101440
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 128.804,
+          "gpu_event_us": 125.69600343704224,
+          "kernel_ns": 100864
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 132.014,
+          "gpu_event_us": 126.17599964141846,
+          "kernel_ns": 101024
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 152.336,
+          "gpu_event_us": 199.52000677585602,
+          "kernel_ns": 100128
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 128.645,
+          "gpu_event_us": 179.45599555969238,
+          "kernel_ns": 100640
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 126.55,
+          "gpu_event_us": 125.50400197505951,
+          "kernel_ns": 100576
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 131.275,
+          "gpu_event_us": 126.11199915409088,
+          "kernel_ns": 100928
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 126.367,
+          "gpu_event_us": 179.4240027666092,
+          "kernel_ns": 100288
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 124.051,
+          "gpu_event_us": 178.49600315093994,
+          "kernel_ns": 100480
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 123.951,
+          "gpu_event_us": 126.52799487113953,
+          "kernel_ns": 101376
+        }
+      ],
+      "validation": "PASS"
+    },
+    {
+      "layer": 14,
+      "queries": 384,
+      "unique_rows": 384,
+      "samples": [
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 135.923,
+          "gpu_event_us": 187.00799345970154,
+          "kernel_ns": 101152
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 130.329,
+          "gpu_event_us": 124.83199685811996,
+          "kernel_ns": 100000
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 135.616,
+          "gpu_event_us": 125.15200674533844,
+          "kernel_ns": 100160
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 130.1,
+          "gpu_event_us": 182.36799538135529,
+          "kernel_ns": 100928
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 123.731,
+          "gpu_event_us": 178.97599935531616,
+          "kernel_ns": 101792
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 125.347,
+          "gpu_event_us": 126.20800733566284,
+          "kernel_ns": 101248
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 128.982,
+          "gpu_event_us": 127.42400169372559,
+          "kernel_ns": 102496
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 133.338,
+          "gpu_event_us": 182.0479929447174,
+          "kernel_ns": 100544
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 128.158,
+          "gpu_event_us": 180.25599420070648,
+          "kernel_ns": 101184
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 126.743,
+          "gpu_event_us": 126.0479986667633,
+          "kernel_ns": 100992
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 127.624,
+          "gpu_event_us": 125.40799379348755,
+          "kernel_ns": 100128
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 131.965,
+          "gpu_event_us": 183.48799645900726,
+          "kernel_ns": 101088
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 125.884,
+          "gpu_event_us": 178.17600071430206,
+          "kernel_ns": 100000
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 126.364,
+          "gpu_event_us": 126.17599964141846,
+          "kernel_ns": 100992
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 126.607,
+          "gpu_event_us": 126.01600587368011,
+          "kernel_ns": 101344
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 127.86,
+          "gpu_event_us": 180.12799322605133,
+          "kernel_ns": 100704
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 125.743,
+          "gpu_event_us": 180.51199615001678,
+          "kernel_ns": 101632
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 125.201,
+          "gpu_event_us": 124.67200309038162,
+          "kernel_ns": 99808
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 125.167,
+          "gpu_event_us": 125.76000392436981,
+          "kernel_ns": 100800
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 156.688,
+          "gpu_event_us": 196.3520050048828,
+          "kernel_ns": 102080
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 163.61,
+          "gpu_event_us": 211.58400177955627,
+          "kernel_ns": 101824
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 137.235,
+          "gpu_event_us": 124.86399710178375,
+          "kernel_ns": 99936
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 130.181,
+          "gpu_event_us": 125.2799928188324,
+          "kernel_ns": 100160
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 127.175,
+          "gpu_event_us": 180.80000579357147,
+          "kernel_ns": 101408
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 130.744,
+          "gpu_event_us": 178.3359944820404,
+          "kernel_ns": 101184
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 128.612,
+          "gpu_event_us": 125.98399817943573,
+          "kernel_ns": 100832
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 128.835,
+          "gpu_event_us": 125.40799379348755,
+          "kernel_ns": 100064
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 127.485,
+          "gpu_event_us": 181.18399381637573,
+          "kernel_ns": 101248
+        },
+        {
+          "queued": false,
+          "start_completed_before_submit_return": true,
+          "host_submit_us": 132.092,
+          "gpu_event_us": 184.92799997329712,
+          "kernel_ns": 100448
+        },
+        {
+          "queued": true,
+          "start_completed_before_submit_return": false,
+          "host_submit_us": 126.461,
+          "gpu_event_us": 126.08000636100769,
+          "kernel_ns": 101248
+        }
+      ],
+      "validation": "PASS"
+    }
+  ]
+}

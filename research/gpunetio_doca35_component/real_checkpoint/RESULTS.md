@@ -38,3 +38,36 @@ WQE-builder time by about 1.3–1.4 µs for 384 rows and 19 µs for 6144 rows,
 but 384-row provider-event times did not improve in that diagnostic. This
 isolates a cost of the checks, not a safe fix or a complete explanation of the
 uninstrumented 384-row gap. The unsafe variant is not shipped as an API.
+
+## Timing and reader-side follow-up
+
+A later 384-row diagnostic alternated the ordinary measurement with a GPU delay
+queued *before* the start event, giving the CPU time to enqueue the lookup. The
+delay is outside the event interval, and each queued sample asserted that the
+start event remained pending after CPU submission. In separate 3.1-pre / 3.5 /
+3.1-post real-checkpoint processes, queued event increases were +6.23% and
++6.10% for layers 1 and 14; GET-kernel medians were about 8 µs higher in the
+3.5 arm. Ordinary-event increases in that bracket were +1.76% and +3.88%.
+The original +6% ordinary result is one noisy bracket, not a stable general
+regression. Samples: [`underfeed/`](underfeed/) and source
+[`vllm_underfeed_diagnostic.py`](vllm_underfeed_diagnostic.py).
+
+To reduce owner/load variation, a single 3.1 owner then served six alternating
+3.1/3.5 reader processes in order old1/new1/new2/old2/old3/new3. This mixed-SDK
+setup first passed a small fixture but is not a general interoperability claim.
+Queued-event changes in the three pairs were +2.80%, +2.19%, +4.15% for layer 1
+and +2.81%, +2.76%, +4.28% for layer 14. GET-kernel medians were about 3–4 µs
+higher for the 3.5 reader in all pairs. Ordinary-event pair changes were
++2.80%, -0.56%, +6.04% and +1.94%, +0.11%, +1.97%, respectively. Every process
+used 15 samples per timing mode, and all data/completion checks and six normal
+lease releases passed. Samples: [`same_owner/`](same_owner/). These results use
+one host, one owner and two implementations/SDKs; they are not serving parity.
+
+Two more diagnostics used a single 3.5 owner. The checked CUDA 12.8 / checked
+CUDA 13 / checked CUDA 12.8 bracket had similar queued kernel medians; samples
+are in [`compiler_bracket/`](compiler_bracket/). A checked / unsafe-unchecked /
+checked comparison reduced queued GET-kernel time about 1.5–1.7 µs when checks
+were bypassed, with little event-time change; samples are in
+[`prepare_underfeed/`](prepare_underfeed/). The unchecked build is a test-only
+ablation and is not a safe fix. The remaining device-path cost and full-model
+performance remain unproven.
