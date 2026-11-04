@@ -12,7 +12,8 @@ is a provider component test, not whole-model serving or general correctness.
 Pre/new/post means 3.1 / 3.5 / 3.1 in separate processes. The 3.1 arm used an
 existing row264 runtime binary SHA256
 `9c158ae71ce75ca68cd45e3d4a02890d59f44cfa52b31f7e4dcb5954c737d46a`;
-its exact source/build provenance has not been established. The 3.5 adapter is
+a retained build identity links it to the same adapter source as public snapshot
+`b5322e46`; see the source-provenance section below. The 3.5 adapter is
 `db51790fdca8832e53a15bcba8674d7c9a1e77d73086ab3e03cc17c810c6d00f`.
 DOCA 3.1.0105 and 3.5.0098 were verified at runtime. The comparison changes
 both implementation and SDK and is not an SDK-only comparison.
@@ -74,13 +75,26 @@ performance remain unproven.
 
 ## Source-pinned 3.1 adapter comparison
 
-The earlier 3.1 baseline binary's exact source was unknown. A 3.1 adapter was
+A second 3.1 adapter was
 rebuilt with CUDA 13 and DOCA 3.1.0105 headers from sources byte-identical in the
 used paths to public NIXL research snapshot
 [`b5322e46`](https://github.com/foraxe/nixl/tree/b5322e46f6e686ff16bdb3afb8a1a940a64e1163).
 Its SHA256 was `7b0a39417f70c78e4af0b8a86be963b24d7f0c47194964ec4563758bd736907c`.
-It linked against the retained 3.1 core/plugin binaries, whose exact source
-provenance is not established; this is not a source rebuild of the full stack.
+It linked against the retained 3.1 core/plugin binaries; this is not a fresh
+source rebuild of the full stack.
+
+The retained original adapter build identity records the same public-snapshot
+adapter source SHA256 and the original `9c158...` binary/core hashes; it is
+included as [`legacy_build_identity.json`](legacy_build_identity.json). The
+retained build tree contains exactly those adapter, core and plugin binaries.
+All 13 retained GPUNETIO plugin source files match public snapshot `b5322e46`
+byte-for-byte; their observed hashes are in
+[`legacy_plugin_sources.sha256`](legacy_plugin_sources.sha256). A historical
+build report associates the core hash with an earlier source checkpoint whose
+core/infra/C++ API/utils trees also match `b5322e46`. These observations
+reconstruct provenance more strongly than a binary hash alone; they are not a
+hermetic full-stack rebuild or proof that every retained source was unchanged
+at its original build time.
 
 A same-owner, three-pair actual-checkpoint comparison between that build and
 the earlier 3.1 binary found queued-event median differences between -0.19%
