@@ -8,6 +8,10 @@ this compares implementations and SDKs together. All timed cases checked
 output bytes and completion counts. These are component observations, not
 end-to-end inference or a claim of a speedup.
 
+A later [actual-checkpoint vLLM provider comparison](real_checkpoint/RESULTS.md)
+exceeded the 5% candidate gate for 384-query cases. The implementation and SDK
+changed together, and the small-query gap remains under investigation.
+
 | Component | Control pre (µs) | 3.5 (µs) | Control post (µs) | Candidate vs midpoint | Control drift |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Grouped graph, 16 QPs | 318.656 | 322.688 | 313.568 | +2.08% | 1.61% |
