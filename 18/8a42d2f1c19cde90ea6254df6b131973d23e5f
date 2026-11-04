@@ -1,0 +1,23 @@
+research/gpunetio_doca35_component/real_checkpoint/legacy_build_identity.json
+  s_f4ecdc97fbe5c3::t_442f9aaa139197 1-5
+research/gpunetio_doca35_component/real_checkpoint/RESULTS.md
+  s_f4ecdc97fbe5c3::t_442f9aaa139197 15-16,78,83-97
+research/gpunetio_doca35_component/real_checkpoint/legacy_plugin_sources.sha256
+  s_f4ecdc97fbe5c3::t_442f9aaa139197 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "188a42d2f1c19cde90ea6254df6b131973d23e5f",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
