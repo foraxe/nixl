@@ -1,0 +1,51 @@
+research/gpunetio_doca35_component/real_checkpoint/compiler_bracket/compiler13.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/prepare_underfeed/unchecked.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/same_owner/old2.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/same_owner/new3.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/underfeed/pre.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/same_owner/new2.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/underfeed/new.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/compiler_bracket/release-pre.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/vllm_underfeed_diagnostic.py
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-90
+research/gpunetio_doca35_component/real_checkpoint/RESULTS.md
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 41-73
+research/gpunetio_doca35_component/real_checkpoint/same_owner/old3.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/same_owner/old1.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/compiler_bracket/release-post.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/prepare_underfeed/checked-pre.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/same_owner/new1.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/underfeed/post.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+research/gpunetio_doca35_component/real_checkpoint/prepare_underfeed/checked-post.json
+  s_f4ecdc97fbe5c3::t_8a9cd4b4a4a574 1-444
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8f17ec43381fedaa4c47e1ec40afcb2c51cb02a5",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
