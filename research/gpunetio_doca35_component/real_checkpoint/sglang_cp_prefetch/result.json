@@ -1,0 +1,109 @@
+{
+  "validation": "PASS",
+  "cp_size": 8,
+  "input_tokens": 253,
+  "padded_tokens": 3,
+  "deferred_layer14": true,
+  "checkpoint": "sha256:8e82061d8b3f9ef0124d672354e4c7d545cbfdc7cbd2d5fdd9a0b9846951168e",
+  "results": [
+    {
+      "iteration": 0,
+      "layer": 1,
+      "queries": 4096,
+      "unique_reads": 4048,
+      "lane_reads": [
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253
+      ]
+    },
+    {
+      "iteration": 0,
+      "layer": 14,
+      "queries": 4096,
+      "unique_reads": 4048,
+      "lane_reads": [
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253
+      ]
+    },
+    {
+      "iteration": 1,
+      "layer": 1,
+      "queries": 4096,
+      "unique_reads": 4048,
+      "lane_reads": [
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253
+      ]
+    },
+    {
+      "iteration": 1,
+      "layer": 14,
+      "queries": 4096,
+      "unique_reads": 4048,
+      "lane_reads": [
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253
+      ]
+    }
+  ],
+  "captures": 2,
+  "replays": 4,
+  "lease_released": true
+}
