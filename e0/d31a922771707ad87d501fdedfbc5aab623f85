@@ -1,0 +1,43 @@
+research/gpunetio_doca35_component/real_checkpoint/prepare_ablation/checked-post.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-388
+research/gpunetio_doca35_component/RESULTS.md
+  s_f4ecdc97fbe5c3::t_7de340b178638c 11-14
+research/gpunetio_doca35_component/real_checkpoint/comparison/post.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-72
+research/gpunetio_doca35_component/real_checkpoint/comparison/pre.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-72
+research/gpunetio_doca35_component/real_checkpoint/RESULTS.md
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-40
+research/gpunetio_doca35_component/real_checkpoint/vllm_real_rows_benchmark.py
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-75
+research/gpunetio_doca35_component/real_checkpoint/diagnostic/pre.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-388
+research/gpunetio_doca35_component/real_checkpoint/vllm_real_rows_diagnostic.py
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-85
+research/gpunetio_doca35_component/real_checkpoint/comparison/new.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-72
+research/gpunetio_doca35_component/real_checkpoint/diagnostic/new.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-388
+research/gpunetio_doca35_component/real_checkpoint/diagnostic/post.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-388
+research/gpunetio_doca35_component/real_checkpoint/prepare_ablation/checked-pre.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-388
+research/gpunetio_doca35_component/real_checkpoint/prepare_ablation/unchecked.json
+  s_f4ecdc97fbe5c3::t_57d3a517f8544d 1-388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e0d31a922771707ad87d501fdedfbc5aab623f85",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
