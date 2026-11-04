@@ -23,6 +23,13 @@ QP and no graph. They use the same vLLM runtime wrapper as the
 recorded experiment, but do not execute a whole model. The generated query
 content is synthetic; no model weights or private request traces are included.
 
+The sanitized per-sample measurements and validation records are in
+[`component_samples.json`](component_samples.json). Run
+`python3 summarize_results.py` from this directory to recompute the medians,
+pre/post drift and 5% gate directly from those samples. The summary script
+checks recorded adapter hashes, sample counts and the available validation
+fields; it cannot independently rerun the original hardware checks.
+
 The 3.1 control adapter SHA256 is
 `ad6086bda139657787cf382e1e6209b6c4134a2e39428877f207bf5b879dea5a`;
 the 3.5 adapter is
