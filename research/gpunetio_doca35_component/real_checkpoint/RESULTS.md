@@ -98,3 +98,55 @@ and released their leases. Results are in [`source_baseline/`](source_baseline/)
 This mixed-SDK, same-host result does not establish general inter-version
 compatibility or full-model serving performance; the implementations, SDKs and
 linked core/plugin stacks still differ.
+
+## SGLang 16-lane real-checkpoint comparison
+
+The actual SGLang research `ReaderRuntime` and `ReadPlan` used row264,
+prefetch stream, deduplication, 16 QPs, CUDA graph replay and BF16 gather on
+both checkpoint layers. A single 3.1 owner served three balanced-order pairs
+of source-built 3.1 and 3.5 readers. Each process used 15 alternating immediate
+and prequeued samples per case, verified every completion, and compared packed
+bytes and BF16 output with independently pread checkpoint rows before/after
+measurement. Each captured two graphs and replayed 132 times; all six leases
+were released. This is a same-host reader component, not full-model serving.
+
+| Layer | Distinct rows / queries | Queued pair changes | Immediate pair changes |
+| --- | --- | --- | --- |
+| 1 | 4096 / 4096 | +2.16%, +2.10%, +1.20% | +0.37%, -1.51%, +4.55% |
+| 1 | 2048 / 4096 | +2.73%, +3.29%, +3.37% | +2.99%, -6.45%, +2.47% |
+| 14 | 4096 / 4096 | +2.12%, +1.87%, +1.42% | +2.69%, -4.04%, +3.59% |
+| 14 | 2048 / 4096 | +2.50%, +2.81%, +3.26% | +3.33%, -6.20%, +5.14% |
+
+All queued pairs meet the predeclared 5% component threshold; one immediate
+pair exceeds it. Immediate timing also varies with submission/ordering, so
+neither isolated result establishes stable full-service parity. Raw samples:
+[`sglang_source_baseline/`](sglang_source_baseline/); measurement source:
+[`sglang_real_rows_benchmark.py`](sglang_real_rows_benchmark.py).
+
+To prepare the exact reader support files in a fresh directory, from this
+research branch set `TARGET` to a nonexistent directory and run:
+
+```bash
+export TARGET=/path/to/new/reader-modules
+./prepare_sglang_support.sh
+```
+
+Use the linked vLLM owner's documented setup to start a row264 owner and
+supply matching SDK/core/plugin/ABI-3 library paths to each process. On an
+assigned reader GPU, with `MODEL`, `OWNER_READY_FILE`, `SHIM`, `READER_PORT`
+and `OUTPUT_JSON` set for that environment, run:
+
+```bash
+python sglang_real_rows_benchmark.py --modules "$TARGET" --model "$MODEL" \
+  --ready "$OWNER_READY_FILE" --library "$SHIM" --port "$READER_PORT" \
+  --output "$OUTPUT_JSON"
+```
+
+Run from this directory; select a free port range for 16 reader QPs and keep
+the owner metadata private. The script reads model weights locally as an
+independent reference, so each node must have the matching checkpoint. Its
+support copy of `real_checkpoint_owner.py` differs from the tested source only
+in replacing the unused internal default checkpoint path; the model path is
+always explicit. An assembled copy passed an 8192-row synthetic fixture with
+the same 16-QP and graph checks. The mixed-SDK owner/reader used in the reported
+comparison is a test fixture, not a general compatibility claim.
