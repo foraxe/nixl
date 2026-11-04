@@ -1,0 +1,87 @@
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_fbe20ab432a54d 58-75,78-81
+  s_f4ecdc97fbe5c3::t_0d066673d7515b 76-77
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_66a273a2053cc6 1-9,11-22,28,35,39-43,49,65,72-73,76-82,99-101,108,110,114-117,124-126,130-131,135-137,144-145,152-156,163-165,178-179,193-204,212,215,219,230,232-235,248-250,256-263,269-271,277,280-281,294-296,306,309-312
+  s_f4ecdc97fbe5c3::t_288145081ce953 10
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 23-27,29-34,36-38,44-48,50-55,59-64,66-71,74-75,83-96,98,102-107,109,111-113,118-123,127-129,132-134,138-143,146-151,157-158,160-162,168-170,172-174,181-183,189-190,206-211,217-218,220-221,223-228,240-242,244,246,251-252,254-255,264-268,272-276,278-279,282-293,299-305,307-308
+  s_f4ecdc97fbe5c3::t_ef37818e8d8924 56-58,97
+  s_f4ecdc97fbe5c3::t_8e076b0b5d034b 159,166-167,171,177,192,205,213-214,216,229,231,297-298
+  s_f4ecdc97fbe5c3::t_f1554151b3fb73 175-176,180,184-188,191,222,253
+  s_f4ecdc97fbe5c3::t_25beacfd52089a 236-239,243,245,247
+meson_options.txt
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 53
+src/plugins/gpunetio/gpunetio_plugin.cpp
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 20,32,65
+src/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 20-22,26-27,36-37
+src/plugins/gpunetio/gpunetio_backend_aux.h
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 246-247
+test/gtest/unit/agent/agent.cpp
+  s_f4ecdc97fbe5c3::t_21e55a9d7d2187 1279-1284,1287-1306
+  s_f4ecdc97fbe5c3::t_b3b6ab5d10f596 1285-1286
+src/api/device/gpu/impl/gpunetio/device_gpunetio_compat.cuh
+  s_f4ecdc97fbe5c3::t_4f5ffa4babc50d 1-18,21-65,67-83
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 19-20,66
+src/plugins/gpunetio/gpunetio_device_memview.cpp
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 1-270
+src/api/device/gpu/nixl_device.cuh
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 88-92
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 84-87,93-95
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_cb03a7e312338a 23,32,35-36
+  s_f4ecdc97fbe5c3::t_487064d1f540e1 26-27
+  s_f4ecdc97fbe5c3::t_d85f92d880d2fc 21-22,24,28-31,33-34,37-38
+  s_f4ecdc97fbe5c3::t_25beacfd52089a 25
+src/core/nixl_agent.cpp
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 435,437-438
+src/api/device/gpu/meson.build
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 19,29-34
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 22,70,81-82,160-161,207
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 73-80,162-167
+src/api/device/gpu/impl/device_dispatch.cuh
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 64-67,71-81,83,187-194,199-201,204-206,209-211,213-217
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 62-63,68-70,82,84-85,100-101,151-152,185-186,195-198,202-203,207-208,212,218-220
+  s_f4ecdc97fbe5c3::t_3f274ee002ef9f 221
+src/plugins/gpunetio/verbs/verbs.h
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 28,51-55,65-67,77-78,108,132-133
+src/plugins/gpunetio/verbs/verbs.cpp
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 166-168
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 148-153,165,169,190,196,208,223,229,235,241,247,253,259,266,272-273,280,289,298,307,316,325,329,370-374,383,388-392,417-422,566-567,574,583,592,601,610,619,623
+src/api/device/gpu/device_types.cuh
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 45
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 45-46,54-57,62,64,68-71,287,289,293-295,359,361,468,470-472,474,476-477,479,484,631,634,653-654,746-748,1567-1569,1634,1636,1761-1763,2029-2031
+  s_f4ecdc97fbe5c3::t_86fb4186119f30 47-53,58-61,63,65-67,72-76,285-286,288,290-292,296,304,360,465-467,469,473,475,478,480-483,632-633,635-640,645,649-652,655-660,678,682,698-706,985,1045-1050,1072-1077,1629-1633,1635,1637,1676
+  s_f4ecdc97fbe5c3::t_8d3a34d67326ab 1563-1566,1570
+  s_f4ecdc97fbe5c3::t_93719f6951b78d 485
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_187dd0a373f6a6 31-35,37-38
+  s_f4ecdc97fbe5c3::t_83f0a9c78a41c8 36
+src/api/device/gpu/impl/gpunetio/device_gpunetio.cuh
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 100-230
+  s_f4ecdc97fbe5c3::t_2e8d3619d05df8 1-99,231-254
+src/api/device/gpu/nixl_device_batch.cuh
+  s_f4ecdc97fbe5c3::t_db8ba895a46a1f 1-408
+src/api/device/gpu/impl/gpunetio/device_gpunetio_types.h
+  s_f4ecdc97fbe5c3::t_46e71c697bc8f1 1-95
+src/plugins/gpunetio/gpunetio_device_memview.h
+  s_f4ecdc97fbe5c3::t_eafa91573739a6 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0630a0859751440316f3ee7143b44d4b09d39f88",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
