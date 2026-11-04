@@ -43,6 +43,38 @@ loader for the **matching** core/plugin/DOCA build in each arm. The test
 requires 17 consecutive free OOB ports starting at `LANE_PORT` and two free
 ports starting at `VLLM_PORT`.
 
+## Connect the adapter to the vLLM Engram reader
+
+The standalone vLLM research branch at
+[`eaf7a188`](https://github.com/foraxe/vllm/tree/eaf7a18899a7a8da5ca89eccb8bcf7dffbbb964d)
+contains an ABI-3 owner, reader and `verify_rows.py`. After building the
+adapter above, use its path as `ENGRAM_NIXL_SHIM` for both owner and reader,
+and follow that branch's
+[owner and reader instructions](https://github.com/foraxe/vllm/blob/eaf7a18899a7a8da5ca89eccb8bcf7dffbbb964d/examples/disaggregated/engram_rdma/README.md).
+Use the same DOCA 3.5 candidate core, GPUNETIO plugin and SDK libraries in each
+process. The owner and reader may use separate hosts, GPUs and network devices;
+provide their own ready-file paths and non-overlapping ports. Protect the ready
+file because it contains access information.
+
+```bash
+export ENGRAM_NIXL_SHIM="$OUTPUT"
+# Set NIXL_PLUGIN_DIRECTORY and NIXL_LIBRARY_DIRECTORY to the matching 3.5
+# build, plus MODEL, OWNER_READY_FILE, and TEST_READER_PORT_BASE as described
+# in the linked vLLM instructions. Start its owner first.
+export NIXL_PLUGIN_DIR="$NIXL_PLUGIN_DIRECTORY"
+export LD_LIBRARY_PATH="$NIXL_LIBRARY_DIRECTORY:${LD_LIBRARY_PATH:-}"
+python examples/disaggregated/engram_rdma/verify_rows.py \
+  --model "$MODEL" --ready "$OWNER_READY_FILE" \
+  --library "$ENGRAM_NIXL_SHIM" --reader-port-base "$TEST_READER_PORT_BASE"
+```
+
+The 3.5 adapter and unmodified owner/provider/verifier from this vLLM commit
+passed an actual-checkpoint, same-host reader check: both Engram layers,
+padding, 514-query boundary and 16 alternating-stream reads. The application
+modules ran in an existing vLLM source overlay, so that result does not qualify
+a complete vLLM build or model-serving run. Stop readers and confirm lease
+release before stopping the owner, as described in the vLLM instructions.
+
 ## Run one arm
 
 Use the same NIC, GPU, software stack, inputs and workload in three separate
