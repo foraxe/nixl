@@ -1,0 +1,26 @@
+research/gpunetio_doca35_component/real_checkpoint/sglang_cp_prefetch/probe.py
+  s_f4ecdc97fbe5c3::t_10ea62ebef6889 1-97
+research/gpunetio_doca35_component/real_checkpoint/sglang_cp_prefetch/make_reference.py
+  s_f4ecdc97fbe5c3::t_acafdb8aef7767 7,15
+  s_f4ecdc97fbe5c3::t_10ea62ebef6889 1-6,8-14,16-43
+research/gpunetio_doca35_component/real_checkpoint/sglang_cp_prefetch/result.json
+  s_f4ecdc97fbe5c3::t_10ea62ebef6889 1-109
+research/gpunetio_doca35_component/real_checkpoint/sglang_cp_prefetch/README.md
+  s_f4ecdc97fbe5c3::t_40a7fd22b7bde0 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5df059592a98d75c711ed2c1a461ec965b8dc20d",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
