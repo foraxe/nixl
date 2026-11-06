@@ -64,6 +64,20 @@ transfer requests or notifications. Each engine has one data QP; applications
 can use independent engines for multiple QPs. The default backend remains in
 stream mode.
 
+Native GET users may opt in to `native_relaxed_ordering=true` (default false)
+to request PCIe relaxed ordering for registered VRAM data buffers. This option
+is rejected without `native_device_api=true`. Host source buffers and internal
+notification/control registrations remain strict. Registration retries strict
+ordering if the optional relaxed registration fails; `NIXL_LOG_LEVEL=info`
+reports the accepted ordering of native VRAM MRs.
+
+Only opt in when in-flight GET destination ranges do not overlap. Relaxed
+ordering does not preserve write-after-write order to overlapping ranges.
+Wait for completion and the normal acquire before reusing or consuming a
+destination. Individual CQ error checking, completion visibility, and the
+consistency operation when required are unchanged. See the
+[rdma-core registration contract](https://github.com/linux-rdma/rdma-core/blob/master/libibverbs/man/ibv_reg_mr.3).
+
 CUDA consumers define `NIXL_ENABLE_GPUNETIO_DEVICE_API=1` and include
 `<gpu/nixl_device.cuh>` for scalar `get`, or `<gpu/nixl_device_batch.cuh>` for
 the split-phase `readSession`. The current implementation is restricted to

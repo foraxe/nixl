@@ -289,6 +289,16 @@ nixlDocaEngine::nixlDocaEngine(const nixlBackendInitParams *init_params)
         }
         nativeMode_ = native_option->second == "true";
     }
+    const auto relaxed_option = custom_params->find("native_relaxed_ordering");
+    if (relaxed_option != custom_params->end()) {
+        if (relaxed_option->second != "true" && relaxed_option->second != "false") {
+            throw std::invalid_argument("native_relaxed_ordering must be true or false");
+        }
+        nativeRelaxedOrdering_ = relaxed_option->second == "true";
+    }
+    if (nativeRelaxedOrdering_ && !nativeMode_) {
+        throw std::invalid_argument("native_relaxed_ordering requires native_device_api");
+    }
 #ifndef NIXL_GPUNETIO_DEVICE_API_HOST
     if (nativeMode_) {
         throw std::invalid_argument("GPUNETIO device API is disabled");
@@ -1666,7 +1676,13 @@ nixlDocaEngine::registerMem(const nixlBlobDesc &mem,
                                                     1,
                                                     (size_t)mem.len,
                                                     pd,
-                                                    nixl_mem == VRAM_SEG && memory_gpu != nullptr);
+                                                    nixl_mem == VRAM_SEG && memory_gpu != nullptr,
+                                                    nativeMode_ && nativeRelaxedOrdering_ &&
+                                                        nixl_mem == VRAM_SEG);
+        if (nativeMode_ && nixl_mem == VRAM_SEG) {
+            NIXL_INFO << "GPUNETIO native data MR relaxed ordering="
+                      << priv->mr->uses_relaxed_ordering();
+        }
     }
     catch (const std::exception &e) {
         NIXL_ERROR << e.what();

@@ -42,7 +42,7 @@ globalTimerNs() {
 }
 
 __global__ void
-scalarGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
+scalarGet(nixlMemViewH local, nixlMemViewH remote, uint8_t *destination, int *result) {
     if (threadIdx.x) {
         return;
     }
@@ -68,11 +68,19 @@ scalarGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
     } while (rc == NIXL_IN_PROG && globalTimerNs() < deadline);
     if (rc != NIXL_SUCCESS) {
         *result = 2;
+    } else {
+        // Consume immediately on the GPU, before a kernel boundary or CPU sync.
+        for (size_t i = 0; i < 256; ++i) {
+            if (destination[kScalarDst + i] != uint8_t(((17 + i) * 13 + 7) % 251)) {
+                *result = 14;
+                break;
+            }
+        }
     }
 }
 
 __global__ void
-batchGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
+batchGet(nixlMemViewH local, nixlMemViewH remote, uint8_t *destination, int *result) {
     __shared__ __align__(16) unsigned char storage[sizeof(nixl::gpu::readSession)];
     __shared__ uint64_t first;
     __shared__ int error;
@@ -151,6 +159,14 @@ batchGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
         }
         *result = error;
     }
+    __syncthreads();
+    if (!error) {
+        for (size_t i = threadIdx.x; i < kCount * kItemBytes; i += blockDim.x) {
+            if (destination[kBatchDst + i] != uint8_t(((512 + i) * 13 + 7) % 251)) {
+                atomicExch(result, 15);
+            }
+        }
+    }
 }
 } // namespace
 
@@ -203,7 +219,9 @@ main(int argc, char **argv) {
         nixlAgent reader("gpunetio-get-reader-" + suffix, config);
         nixlBackendH *owner_backend = nullptr, *reader_backend = nullptr;
         auto params = [&](int value, int device) {
+            const char *relaxed = std::getenv("NIXL_GPUNETIO_TEST_RELAXED_ORDERING");
             return nixl_b_params_t{{"native_device_api", "true"},
+                                   {"native_relaxed_ordering", relaxed && std::string(relaxed) == "1" ? "true" : "false"},
                                    {"gpu_devices", std::to_string(device)},
                                    {"network_devices", argv[1]},
                                    {"oob_interface", argv[2]},
@@ -211,6 +229,15 @@ main(int argc, char **argv) {
                                    {"oob_port", std::to_string(value)}};
         };
         auto owner_params = params(port, owner_gpu), reader_params = params(port + 1, reader_gpu);
+        for (const bool invalid_bool : {false, true}) {
+            auto invalid = reader_params;
+            invalid["native_relaxed_ordering"] = invalid_bool ? "invalid" : "true";
+            if (!invalid_bool) invalid["native_device_api"] = "false";
+            nixlBackendH *invalid_backend = nullptr;
+            if (reader.createBackend("GPUNETIO", invalid, invalid_backend) == NIXL_SUCCESS) {
+                throw std::runtime_error("invalid native relaxed-ordering configuration accepted");
+            }
+        }
         check(cudaSetDevice(owner_gpu), "select owner GPU");
         check(owner.createBackend("GPUNETIO", owner_params, owner_backend), "create owner backend");
         check(cudaSetDevice(reader_gpu), "select reader GPU");
@@ -257,7 +284,7 @@ main(int argc, char **argv) {
         check(reader.prepMemView(local, local_view, &reader_hint), "prepare local view");
         check(reader.prepMemView(remote, remote_view, &reader_hint), "prepare remote view");
 
-        scalarGet<<<1, 1>>>(local_view, remote_view, device_result);
+        scalarGet<<<1, 1>>>(local_view, remote_view, destination, device_result);
         check(cudaGetLastError(), "launch scalar GET");
         check(cudaDeviceSynchronize(), "complete scalar GET");
         int result = 0;
@@ -266,13 +293,17 @@ main(int argc, char **argv) {
         if (result) {
             throw std::runtime_error("scalar GET failed: " + std::to_string(result));
         }
-        batchGet<<<1, 32>>>(local_view, remote_view, device_result);
-        check(cudaGetLastError(), "launch batch GET");
-        check(cudaDeviceSynchronize(), "complete batch GET");
-        check(cudaMemcpy(&result, device_result, sizeof(result), cudaMemcpyDeviceToHost),
-              "read batch status");
-        if (result) {
-            throw std::runtime_error("batch GET failed: " + std::to_string(result));
+        // Cross the 2048-entry SQ/CQ wrap and repeatedly consume before kernel exit.
+        for (unsigned round = 0; round < 130; ++round) {
+            check(cudaMemset(destination + kBatchDst, 0xa5, kCount * kItemBytes), "poison batch destination");
+            batchGet<<<1, 32>>>(local_view, remote_view, destination, device_result);
+            check(cudaGetLastError(), "launch batch GET");
+            check(cudaDeviceSynchronize(), "complete batch GET");
+            check(cudaMemcpy(&result, device_result, sizeof(result), cudaMemcpyDeviceToHost),
+                  "read batch status");
+            if (result) {
+                throw std::runtime_error("batch GET failed: " + std::to_string(result));
+            }
         }
         uint8_t received[kBytes];
         check(cudaMemcpy(received, destination, kBytes, cudaMemcpyDeviceToHost),
