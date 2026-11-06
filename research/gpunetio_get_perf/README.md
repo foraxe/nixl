@@ -1,126 +1,135 @@
-# Native GET relaxed-ordering qualification on GB200
+# Backend-owned native GET QP pool
 
-The opt-in `native_relaxed_ordering=true` meets the >=10% lower-latency target
-against tuned NCCL GDAKI on this local NIC-mediated consumer pipeline.
-It is not enabled by default and is not a model/serving throughput claim.
+This change replaces many prepared NIXL engines with one backend-owned QP
+pool. The one-QP default, device-view ABI and GPU get/readSession signatures
+are unchanged. It builds on the separate RO checkpoint(PR #6), which remains
+frozen. This work targets the fork's GET branch for human review only.
 
-## Measured result
+## API and ownership
 
-Median graph-replay pipeline latency, 2026-11-06:
+Set `native_device_api=true` and `native_qp_count=N`(1..32, default1) on both
+peers. Register each buffer once. Prepare ordinary NIXL view pairs once with
+`hint.customParam="native_channel=N"`; omitted/empty selects0. Kernel callers
+keep using the same get/status/readSession calls. There are no new per-copy
+CPU descriptors, posting requests, futures or connection objects.
 
-| Scattered reads | Tuned GDAKI | NIXL relaxed GET | NIXL lower latency |
+Each channel has its own phase, generation, SQ and CQ, backed by the engine's
+shared PD/registrations. Different channel context pointers reject mixed
+local/remote/scratch view pairs. Preparing another view of a bound channel
+never resets its generations or credits. Failed/busy channel views retain
+pins until safe teardown. Native mode still binds one peer per engine.
+
+Channels are independently ordered EVEN with RO disabled. Synchronize before
+reusing overlapping destinations/scratch across channels. RO remains separate,
+opt-in and default false. Notifications/control registrations remain strict.
+Legacy WRITE `data_qp_count` remains capped at4, with its old stream constraints.
+Native pools do not allocate the unused legacy CPU-mapped WRITE counter.
+
+The existing versioned QPN exchange is reused. Pools larger than one retain
+an unused dedicated QP for wire compatibility; the additional QP set provides
+N active READ channels. The one-QP wire path is unchanged. Both peers must
+configure the same count; mismatches are rejected, not silently negotiated.
+No route restart/recovery or multi-peer native support is added.
+
+## Performance against batched GDAKI
+
+GB200 same-NIC loopback, HOST_NUMA source -> HBM, scattered264B rows,
+identical vector checksum consumer. Both use relaxed VRAM data registration;
+NIXL explicitly enables the separate `native_relaxed_ordering=true` option.
+GDAKI uses GPU doorbells, CTA sharing,
+queue2048, aggregate-request tiles512, and the same active QP count. No
+availability/error checks were removed from NIXL. Graph median wall times:
+
+| Case | Reads | NIXL us | Batched GDAKI us |
 | --- | ---: | ---: | ---: |
-| 384 x 264B | 0.589 ms | 0.331 ms | 43.8% |
-| 4096 x 264B | 6.814 ms | 3.253 ms | 52.3% |
+| One backend/one QP | 384 | 130.37 | 125.11 |
+| One backend/32QPs/32CTAs | 384 | 50.32 | 44.00 |
+| One backend/32QPs/fourCTAs | 384 | 50.11 | 42.34 |
+| One backend/one QP | 4096 | 1121.11 | 1024.05 |
+| One backend/32QPs/32CTAs | 4096 | 163.12 | 158.88 |
+| One backend/32QPs/fourCTAs | 4096 | 181.81 | 158.08 |
 
-Eager results agree: 0.591/0.332 ms and 6.824/3.256 ms, respectively.
-Every one of three brackets cleared 10% on GPU-event and synchronized wall
-time, for both sizes and both schedules. NIXL won all 300 measured pairs in
-each primary comparison. No samples were removed.
+The pool makes32QP throughput practical with ONE agent/backend/registration
+per rank. At4096rows,32CTAs provide6.87x lower wall latency than one QP;
+fourCTAs provide6.17x. The32CTA transfer-ready interval is96.72us versus
+GDAKI92.16us; full wall is2.7% slower than GDAKI. FourCTAs use fewer blocks
+but are about15% slower end-to-end than GDAKI's32CTAs. This is a resource /
+latency tradeoff, not a NIXL-superiority claim or measured compute-interference
+win. Eager measurements and all samples are retained in `pool_evidence/`.
 
-The comparator is GDAKI with a 2048-entry queue and
-`NCCL_GIN_RESOURCE_SHARING_CTA`, not its slower stock defaults. Both paths
-use one 128-thread CTA and one requested context/data QP. NIXL uses 512-row
-windows and checks every READ CQE. Neither backend's completion policy was
-changed for this optimization.
+Matched32-independent-engine/four-CTA NIXL is184.31us versus181.81us for the
+pool. Do NOT advertise that1.4% difference as a win: its GDAKI control also
+varied about5.4%. The supported conclusion is similar throughput with32->1
+NIXL agents/backends/registrations and one retirement event instead of32.
 
-Three fresh, unmodified GET-branch controls with the exact same current
-adapter and harness gave NIXL graph medians 0.785/6.590 ms. The patched
-plugin with the new option disabled gave 0.788/6.488 ms; do not substitute
-older historical 0.814/8.4-ms runs for these matched controls. The final
-gain claim compares NIXL and GDAKI in the same relaxed-arm process.
+Three fresh launches per case,20warmups and100samples per mode/size; four
+rotating eager/graph x GDAKI/NIXL modes, two sizes, four configurations:
+9600timed pipelines plus1920warmups. Every byte/checksum/guard and accepted
+READ count is validated outside timing. Both ranks close normally in all12
+runs. GPU events separately record ID/GET/ready and consume/retirement time.
+No profiler or trimmed samples enter these results.
 
-## Fix and contract
+## Correctness
 
-GDAKI normally registers data MRs with PCIe relaxed ordering. NIXL's native
-GET registrations were strict. An independent GDAKI control with relaxed
-ordering disabled reproduced the slow handoff to the checksum consumer.
-The NIXL change adds a setup-only option for VRAM data MRs, not another
-per-copy API, request handle or CPU posting step.
+- CPU option tests with C++20 -Wall -Wextra -Werror: counts1..32, all channel
+  indices/default0, malformed/signed/out-of-range/binary options. Independent
+  C++17 parser review passed as well.
+- Default1 and pool4 x strict/RO x pinned Host/VRAM; extra pool32/RO/Host.
+  Distinct device lane/QP addresses, mixed-channel rejection, immediate scalar
+  and batch GPU consumers,130x16 SQ/CQ wrap per channel, repeated poisoned
+  buffers, metadata reload and generation-preserving re-preparation.
+- Mismatched1/4,4/1 and2/4 peers reject during MD/OOB setup. Disposable
+  processes retain setup resources until exit; no recovery claim is made.
+- A real invalid-rkey READ on the last pool channel returns a CQ error, then
+  refuses reuse; a healthy channel continues to GET/consume correctly.
+  Releasing idle and failed views preserves the failed view/MR lease. Memory
+  checking of that retained view reports zero errors. Failed resources are
+  retained until disposable-process exit, not reclaimed speculatively.
+- The frozen pre-pool one-QP test binary runs against this plugin, validating
+  the unchanged default/device ABI path. Feature-disabled host translation
+  units compile with Werror; this is not a full feature-disabled GPU run.
+- Release plugin build, shell/Python/whitespace/SPDX checks and an independent
+  code/evidence review. CPU partition verification checks47840 representative
+  indexing/wave-count configurations; it is not runtime CUDA qualification
+  of all arbitrary shapes.
 
-```cpp
-nixl_b_params_t params{{"native_device_api", "true"},
-                       {"native_relaxed_ordering", "true"}};
-// Add the usual device/OOB parameters; the GPU GET API is unchanged.
-```
+Hardware requiring MCST remains unvalidated. Real scalar-channel CQ failure
+is tested; real NIC-error/recovery of the cooperative multi-channel benchmark
+helper is not separately qualified. Completion fences/CQE checking in the
+public device API are unchanged. GPU performance is not model/serving E2E,
+cross-host/cable bandwidth, sustained compute interference, or proof of an
+absolute physical limit. The earlier43.8%/52.3% RO headline was against
+per-request-posting GDAKI, not this stronger batched control.
 
-Default remains strict. The option requires native mode. Host source MRs
-and internal notification/control MRs remain strict. DMA-BUF and PeerDirect
-registration retry strict flags if the optional relaxed attempt fails.
-Registration logs report the accepted ordering.
+## Reproduction and provenance
 
-Only opt in for non-overlapping in-flight destination ranges. Wait/acquire
-before consuming or reusing them. Relaxed ordering changes write-after-write
-ordering but not completion visibility; see the
-[rdma-core contract](https://github.com/linux-rdma/rdma-core/blob/master/libibverbs/man/ibv_reg_mr.3).
-CQ error checks, acquire fences, MCST handling and retirement are unchanged.
+Source base fbe8ccd3(GET bdf954038aa76cec4b63d2fb556debc0a62ea696 plus PR #6).
+CUDA13.1 sm100; NCCL2.32.3 commit3e46c089f4ae4732722a419eb6096aead7e47a30,
+bundled GPUNetIO4.1.0; NIXL DOCA3.5.0098. Different SDKs mean this is not an
+isolated framework-overhead comparison. Physical GPUs0/1, NUMA0, mlx5_0/GID3,
+LSA1/P2P-disabled, reported400Gb/s, same-NIC loopback, not external network.
 
-## Evidence and bounds
-
-- GB200 ARM64, physical GPU0 owner / GPU1 reader, both NUMA0; mlx5_0/GID3,
-  reported 400 Gb/s, same-NIC RDMA loopback. LSA size 1 and P2P disabled.
-  Runtime asserts GDAKI and GPU doorbell handler 2; no host-proxy GIN fallback.
-- HOST_NUMA VMM source with 8192 packed 264B rows, HBM destination.
-  GPU-generated scattered IDs change each sample. Timed pipeline includes ID
-  generation, GET, checksum consumer and API retirement where required.
-  Every payload byte, checksum and destination guard is checked outside timing.
-  Distinct rank source patterns reject accidental local reads.
-- CUDA 13.1, sm_100, NVML driver 580.105.08. NCCL 2.32.3 commit
-  `3e46c089f4ae4732722a419eb6096aead7e47a30`, bundled GPUNetIO 4.1.0.
-  NIXL GET base `bdf954038aa76cec4b63d2fb556debc0a62ea696`, DOCA 3.5.0098.
-  This is a working-stack comparison, not an isolated SDK comparison.
-- Three pre/relaxed/post brackets, 20 warmups and 100 samples per mode/size.
-  7200 measured pipelines and 1440 warmups passed; all 18 ranks closed cleanly.
-  Strict pre/post controls drifted less than 5% in every bracket. Three extra
-  unmodified-base launches add 2400 measured pipelines and 480 warmups.
-- CPU policy test covers strict default, relaxed flags, strict retry and total
-  failure using the callback shared by both registration paths. GPU tests pass
-  strict/relaxed x pinned Host/VRAM, scalar/batch, immediate in-kernel consumers,
-  poison-and-reuse, 130 x 16 operations across SQ/CQ wrap, guards and invalid
-  options/descriptors. Hardware DMA-BUF strict retry is not separately proven;
-  that retry path has callback-policy coverage.
-- Warm repeated component data, not cold bulk bandwidth, a physical-limit
-  claim, full model serving, or sustained-compute interference. Hardware
-  requiring MCST remains unvalidated; that inherited path is unchanged.
-
-Raw numeric samples, source/binary identities and selected validation records
-are in `evidence/`. Selected records are explicitly not full machine logs;
-their full-log hashes are retained. Full logs and diagnostic experiments stay
-in the ignored local `results/` directory. `evidence/correctness.json` retains
-correctness markers. `evidence/summary.json` is the auditable gate output.
-
-Terminal-CQE gating and a different acquire-fence experiment did not produce
-a gain; neither is in the library patch. The external profiler stalled its
-diagnostic capture, which was excluded. No profiler measurements enter the
-primary performance result.
-
-## Reproduce
-
-On the original GB200 workspace, private dependencies and builds are under
-`/workspace/gpunetio/kernel-copy-tools`. The tested plugin is in
-`get-perf/build/src/plugins/gpunetio`; the unchanged core/framework is from
-the pinned `gdaki-compare/install` prefix. The adapter starts from reproduction
-commit `5df059592a98d75c711ed2c1a461ec965b8dc20d`; its only active behavioral
-addition is forwarding the new backend option at setup.
-
-Build the plugin from this source with Meson release, GPUNETIO enabled,
-`gpunetio_device_api=enabled`, and CUDA arch 100; do not rebuild the frozen
-benchmark/plugin while a run is active. `build.sh` builds a fresh GDAKI-only
-harness; `build_adapter.sh` builds the adapter against this source's headers.
-Set `NCCL_ROOT`, `CUDA_ARCH=sm_100`, `GIN_SHARING=CTA` and a fresh `BENCH_BINARY`
-for the harness, and `OUTPUT` for the adapter. The local scripts document
-the pinned dependency locations rather than modifying system packages.
+Build the plugin release with GPUNETIO/device API enabled, CUDA arch100.
+The pinned local build is `/workspace/gpunetio/kernel-copy-tools/get-pool/build`;
+it links the unchanged framework from the `gdaki-compare/install` prefix.
+`build_adapter.sh` uses this source's device headers. Build the harness using
+`build.sh`, GIN_SHARING=CTA, GIN_AGGREGATE=512, VECTOR_CONSUMER=1 and the desired
+BENCH_QPS. BACKEND_POOL=1(default) creates one pooled backend;0 is the matched
+independent-engine control. The benchmark facade's read call is unchanged.
 
 ```bash
-# In this directory after building the frozen gate binaries:
-bash validate_local.sh UNIQUE_CORRECTNESS_TAG
-bash run_gate.sh UNIQUE_GATE_PREFIX
-python3 analyze_gate.py results UNIQUE_GATE_PREFIX
+# Hardware checks with the frozen local binaries; choose fresh tags.
+bash validate_pool.sh UNIQUE_CORRECTNESS_TAG
+bash run_pool_perf.sh UNIQUE_PERF_PREFIX
+python3 analyze_pool.py results UNIQUE_PERF_PREFIX
 
-# Audit the committed measurements without a GPU or external logs:
-python3 analyze_gate.py evidence ro-gate-v1
+# Recalculate committed measurements without GPU/private logs.
+python3 analyze_pool.py pool_evidence
 ```
 
-Do not mix other queue depths, GPU-sharing modes, SDK builds, topologies or
-missing/error runs into the reported comparison. The fork PR is a human-review
-checkpoint, not authority to update an upstream PR.
+Data files retain exact samples, build/source identities, selected markers
+and configuration. Selected records are not full logs; their full-log hashes
+are retained. Full local logs are ignored under `results/`. The inherited
+`evidence/` directory is the historical PR #6 checkpoint; its `analyze_gate.py`
+source-identity audit must be run from fbe8ccd3, not this modified harness.
+Do not rebuild frozen binaries used by an active experiment.

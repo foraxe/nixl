@@ -1,0 +1,279 @@
+{
+  "status": "PASS",
+  "measured_pipelines": 9600,
+  "warmup_pipelines": 1920,
+  "matrix": {
+    "p1": {
+      "active_qps": 1,
+      "nixl_engines": 1,
+      "nixl_ctas": 1,
+      "gin_ctas": 1,
+      "sizes": {
+        "384": {
+          "gin_eager": {
+            "wall_us": 125.761,
+            "gpu_us": 116.576,
+            "id_get_and_ready_us": 106.56,
+            "consumer_and_retirement_us": 9.792,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 131.041,
+            "gpu_us": 122.08,
+            "id_get_and_ready_us": 111.712,
+            "consumer_and_retirement_us": 10.464,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 125.10499999999999,
+            "gpu_us": 116.128,
+            "id_get_and_ready_us": 105.344,
+            "consumer_and_retirement_us": 10.24,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 130.369,
+            "gpu_us": 121.136,
+            "id_get_and_ready_us": 110.528,
+            "consumer_and_retirement_us": 10.24,
+            "samples": 300
+          }
+        },
+        "4096": {
+          "gin_eager": {
+            "wall_us": 1026.5655,
+            "gpu_us": 1017.0550000000001,
+            "id_get_and_ready_us": 960.0799999999999,
+            "consumer_and_retirement_us": 56.864,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 1123.142,
+            "gpu_us": 1113.745,
+            "id_get_and_ready_us": 1056.64,
+            "consumer_and_retirement_us": 56.944,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 1024.0529999999999,
+            "gpu_us": 1014.83,
+            "id_get_and_ready_us": 957.6800000000001,
+            "consumer_and_retirement_us": 56.96,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 1121.1095,
+            "gpu_us": 1111.4099999999999,
+            "id_get_and_ready_us": 1054.385,
+            "consumer_and_retirement_us": 56.96,
+            "samples": 300
+          }
+        }
+      }
+    },
+    "p32": {
+      "active_qps": 32,
+      "nixl_engines": 1,
+      "nixl_ctas": 32,
+      "gin_ctas": 32,
+      "sizes": {
+        "384": {
+          "gin_eager": {
+            "wall_us": 44.144999999999996,
+            "gpu_us": 35.328,
+            "id_get_and_ready_us": 25.28,
+            "consumer_and_retirement_us": 9.76,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 50.656,
+            "gpu_us": 41.408,
+            "id_get_and_ready_us": 31.424,
+            "consumer_and_retirement_us": 9.76,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 44.0,
+            "gpu_us": 34.72,
+            "id_get_and_ready_us": 23.648,
+            "consumer_and_retirement_us": 10.272,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 50.320499999999996,
+            "gpu_us": 41.2,
+            "id_get_and_ready_us": 30.368,
+            "consumer_and_retirement_us": 10.288,
+            "samples": 300
+          }
+        },
+        "4096": {
+          "gin_eager": {
+            "wall_us": 159.393,
+            "gpu_us": 149.904,
+            "id_get_and_ready_us": 92.992,
+            "consumer_and_retirement_us": 56.864,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 165.47250000000003,
+            "gpu_us": 155.904,
+            "id_get_and_ready_us": 98.944,
+            "consumer_and_retirement_us": 56.864,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 158.881,
+            "gpu_us": 149.088,
+            "id_get_and_ready_us": 92.16,
+            "consumer_and_retirement_us": 56.928,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 163.1205,
+            "gpu_us": 153.856,
+            "id_get_and_ready_us": 96.72,
+            "consumer_and_retirement_us": 56.96,
+            "samples": 300
+          }
+        }
+      }
+    },
+    "i32c4": {
+      "active_qps": 32,
+      "nixl_engines": 32,
+      "nixl_ctas": 4,
+      "gin_ctas": 32,
+      "sizes": {
+        "384": {
+          "gin_eager": {
+            "wall_us": 45.376,
+            "gpu_us": 36.064,
+            "id_get_and_ready_us": 26.24,
+            "consumer_and_retirement_us": 9.76,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 52.896,
+            "gpu_us": 43.712,
+            "id_get_and_ready_us": 32.896,
+            "consumer_and_retirement_us": 10.784,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 44.192,
+            "gpu_us": 35.136,
+            "id_get_and_ready_us": 24.32,
+            "consumer_and_retirement_us": 10.24,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 52.192,
+            "gpu_us": 43.04,
+            "id_get_and_ready_us": 32.144,
+            "consumer_and_retirement_us": 10.912,
+            "samples": 300
+          }
+        },
+        "4096": {
+          "gin_eager": {
+            "wall_us": 167.505,
+            "gpu_us": 157.76,
+            "id_get_and_ready_us": 100.944,
+            "consumer_and_retirement_us": 56.832,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 185.985,
+            "gpu_us": 176.336,
+            "id_get_and_ready_us": 119.296,
+            "consumer_and_retirement_us": 57.632,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 166.91250000000002,
+            "gpu_us": 157.024,
+            "id_get_and_ready_us": 100.08,
+            "consumer_and_retirement_us": 56.928,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 184.305,
+            "gpu_us": 174.816,
+            "id_get_and_ready_us": 116.864,
+            "consumer_and_retirement_us": 57.984,
+            "samples": 300
+          }
+        }
+      }
+    },
+    "p32c4": {
+      "active_qps": 32,
+      "nixl_engines": 1,
+      "nixl_ctas": 4,
+      "gin_ctas": 32,
+      "sizes": {
+        "384": {
+          "gin_eager": {
+            "wall_us": 43.616,
+            "gpu_us": 34.464,
+            "id_get_and_ready_us": 24.64,
+            "consumer_and_retirement_us": 9.76,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 51.6965,
+            "gpu_us": 42.496,
+            "id_get_and_ready_us": 32.448,
+            "consumer_and_retirement_us": 9.76,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 42.336,
+            "gpu_us": 33.536,
+            "id_get_and_ready_us": 23.296,
+            "consumer_and_retirement_us": 10.24,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 50.112,
+            "gpu_us": 40.896,
+            "id_get_and_ready_us": 30.752,
+            "consumer_and_retirement_us": 10.24,
+            "samples": 300
+          }
+        },
+        "4096": {
+          "gin_eager": {
+            "wall_us": 159.361,
+            "gpu_us": 149.84,
+            "id_get_and_ready_us": 92.992,
+            "consumer_and_retirement_us": 56.864,
+            "samples": 300
+          },
+          "nixl_eager": {
+            "wall_us": 184.113,
+            "gpu_us": 175.024,
+            "id_get_and_ready_us": 117.568,
+            "consumer_and_retirement_us": 56.992000000000004,
+            "samples": 300
+          },
+          "gin_graph": {
+            "wall_us": 158.0805,
+            "gpu_us": 148.752,
+            "id_get_and_ready_us": 91.72800000000001,
+            "consumer_and_retirement_us": 56.928,
+            "samples": 300
+          },
+          "nixl_graph": {
+            "wall_us": 181.808,
+            "gpu_us": 172.656,
+            "id_get_and_ready_us": 115.712,
+            "consumer_and_retirement_us": 56.928,
+            "samples": 300
+          }
+        }
+      }
+    }
+  }
+}

@@ -26,7 +26,7 @@ export NCCL_DEBUG_FILE="$task_output/nccl.%h.%p.log"
   [[ ! -f "$task_dir/engram_native_nixl35.cu" ]] || sha256sum "$task_dir/engram_native_nixl35.cu"
   [[ ! -f "${NIXL_PLUGIN_DIR:-}/libplugin_GPUNETIO.so" ]] || sha256sum "$NIXL_PLUGIN_DIR/libplugin_GPUNETIO.so"
   nvidia-smi --query-gpu=name,driver_version,pci.bus_id --format=csv
-  env | sort | sed -n '/^NCCL_/p; /^NIXL_/p; /^GPUNETIO_/p; /^CUDA_VISIBLE_DEVICES=/p; /^LD_LIBRARY_PATH=/p'
+  env | sort | sed -n '/^NCCL_/p; /^NIXL_/p; /^GPUNETIO_/p; /^BENCH_/p; /^CUDA_VISIBLE_DEVICES=/p; /^LD_LIBRARY_PATH=/p'
 } > "$task_output/provenance.txt"
 set +e
 timeout --signal=TERM --kill-after=15s "${TIMEOUT_SECONDS:-300}s" \
@@ -36,9 +36,22 @@ timeout --signal=TERM --kill-after=15s "${TIMEOUT_SECONDS:-300}s" \
 task_status=${PIPESTATUS[0]}
 set -e
 [[ "$task_status" == 0 ]] || exit "$task_status"
+if [[ "$task_rank" == 1 && -n "${BENCH_EXPECT_COOP_FAILURE:-}" ]]; then
+  grep -q "EXPECTED_COOP_FAILURE stage=$BENCH_EXPECT_COOP_FAILURE sticky=1" "$task_output/stdout.log"
+  exit 0
+fi
+if [[ "$task_rank" == 0 && -n "${BENCH_EXPECT_COOP_FAILURE:-}" ]]; then
+  grep -q 'EXPECTED_REMOTE_COOP_FAILURE' "$task_output/stdout.log"
+  exit 0
+fi
 grep -q "GDAKI_VERIFIED rank=$task_rank " "$task_output/stdout.log"
 grep -q "CLEAN_CLOSE rank=$task_rank" "$task_output/stdout.log"
 if [[ "$task_rank" == 1 ]]; then
+  if [[ -n "${BENCH_EXTRA_ROWS:-}" ]]; then
+    grep -q "PASS rows=$BENCH_EXTRA_ROWS arms=4 samples=${SAMPLES:-100}" "$task_output/stdout.log"
+    printf 'EXTRA_ROWS_VALIDATED=%s\n' "$BENCH_EXTRA_ROWS"
+    exit 0
+  fi
   python3 "$task_dir/summarize.py" "$task_output/results.json"
   printf 'RESULT_JSON=%s\n' "$task_output/results.json"
 fi

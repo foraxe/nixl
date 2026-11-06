@@ -1,0 +1,109 @@
+{
+  "description": "Selected validation records; full logs retained locally",
+  "cases": {
+    "mismatch-1-4": {
+      "raw_log_sha256": "97b1b2272ef0c4ea0a7ff21834637fe00b2d0887ae159c983c9a1382f54ed69e",
+      "markers": [
+        "PASS mismatched native QP counts rejected; SETUP_RESOURCES_RETAINED_UNTIL_EXIT"
+      ]
+    },
+    "mismatch-2-4": {
+      "raw_log_sha256": "216f98cd9af745b3b1644a776ba42a479fa86e5b027657b8d9d56f299d7e92c3",
+      "markers": [
+        "PASS mismatched native QP counts rejected; SETUP_RESOURCES_RETAINED_UNTIL_EXIT"
+      ]
+    },
+    "mismatch-4-1": {
+      "raw_log_sha256": "88ecd2802ce2454d706d24cdbe163d57476e8d67d8af190eb0d3ec833f36cd60",
+      "markers": [
+        "PASS mismatched native QP counts rejected; SETUP_RESOURCES_RETAINED_UNTIL_EXIT"
+      ]
+    },
+    "options": {
+      "raw_log_sha256": "4fede97ad3af1f8c26705134d56fddc161daa0a4840f611ac4305b843f08aed6",
+      "markers": [
+        "PASS pool sizes, all channels, invalid/binary options"
+      ]
+    },
+    "q1-relaxed-DRAM": {
+      "raw_log_sha256": "113adc266b3cb5114f7ee8aeaddb6e6e889db016723f87fde58d05ff4a98f73f",
+      "markers": [
+        "PASS DRAM qps=1 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q1-relaxed-VRAM": {
+      "raw_log_sha256": "e4f80bc4123b1d92dd5d0ca62f6bbd71c8cd24b4e0eee10a90ef465177b1e9bb",
+      "markers": [
+        "PASS VRAM qps=1 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q1-strict-DRAM": {
+      "raw_log_sha256": "35b1fea63c1859f30c6a8e04cb3fb6940bda9b51bcc02477a6a2e0b96d553f7d",
+      "markers": [
+        "PASS DRAM qps=1 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q1-strict-VRAM": {
+      "raw_log_sha256": "0a121093596eb1ddb0e669fe2d3b26274a9e8ec9d1404c6a5a0bed9eb8a1c334",
+      "markers": [
+        "PASS VRAM qps=1 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q32-relaxed-DRAM": {
+      "raw_log_sha256": "7414c4d7ebdb38d90c09894817256dbf5c92e214c3ee73c91bcebd955b2bfe62",
+      "markers": [
+        "PASS DRAM qps=32 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q4-relaxed-DRAM": {
+      "raw_log_sha256": "83224fdd90aafd9ca5756c836cb039c97e0986bd23f23865355e41eb1df0c5bf",
+      "markers": [
+        "PASS DRAM qps=4 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q4-relaxed-VRAM": {
+      "raw_log_sha256": "a77d8122a1eae88ea544d4d57ba93b0e219d77f9b765478b08a5df932fb81de5",
+      "markers": [
+        "PASS VRAM qps=4 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q4-strict-DRAM": {
+      "raw_log_sha256": "fe215253a4b575707df29663f6b83dca49be9397d7817c1eb39b93792e9a8d19",
+      "markers": [
+        "PASS DRAM qps=4 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "q4-strict-VRAM": {
+      "raw_log_sha256": "11776eb22d31357fb7b99361f1688f807e88752e1da0c619effb8789f1d0f93c",
+      "markers": [
+        "PASS VRAM qps=4 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "retention-memcheck": {
+      "raw_log_sha256": "a6bbeb38f2426409d5e93dd411dbd75ffa6702652efcd11931016f6f6ee46128",
+      "markers": [
+        "PASS real CQ error, sticky refusal, independent healthy channel",
+        "PASS pool idle release and failed-channel retention; QUARANTINED_UNTIL_PROCESS_EXIT",
+        "========= ERROR SUMMARY: 0 errors"
+      ]
+    }
+  },
+  "frozen_old_binary": {
+    "raw_log_sha256": "04d0503fc083e8438bd36807bce796dad3c0398db907174af2ce280d1af0b204",
+    "marker": [
+      "PASS DRAM scalar and CTA batch GET; data, guards and completion validated"
+    ]
+  },
+  "disabled_host_compilation": {
+    "raw_log_sha256": "42f4588957a525eb55baa7344c860b171018b03b24b45932e7b80ff51d818dd3",
+    "markers": [
+      "PASS feature-disabled host translation unit: gpunetio_device_memview.cpp",
+      "PASS feature-disabled host translation unit: gpunetio_backend.cpp",
+      "PASS feature-disabled host translation unit: gpunetio_plugin.cpp"
+    ]
+  },
+  "unit_binary_hashes": [
+    "cd6094b435fe0e2e10672f035e2637c1ca32e8904f3eb1ef87538e62ad50f931  /workspace/gpunetio/kernel-copy-tools/get-pool/device_get_test_fault",
+    "a130415c8ef5678a7b3779803a774279ec7bae3bfba6870f175f6951f6bec3c2  /workspace/gpunetio/kernel-copy-tools/get-pool/build/src/plugins/gpunetio/libplugin_GPUNETIO.so"
+  ]
+}

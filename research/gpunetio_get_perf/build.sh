@@ -12,6 +12,9 @@ case "${GIN_SHARING:-GPU}" in GPU|CTA) ;; *) echo 'GIN_SHARING must be GPU or CT
   -DNCCL_GIN_GDAKI_ENABLE=1 -DNCCL_GIN_PROXY_ENABLE=0 \
   -DNCCL_GIN_GPI_ENABLE=0 -DNCCL_GIN_EFA_GDA_ENABLE=0 \
   -DBENCH_GIN_SHARING=NCCL_GIN_RESOURCE_SHARING_"${GIN_SHARING:-GPU}" \
+  -DBENCH_GIN_AGGREGATE="${GIN_AGGREGATE:-0}" -DBENCH_VECTOR_CONSUMER="${VECTOR_CONSUMER:-0}" \
+  -DBENCH_QPS="${BENCH_QPS:-1}" \
+  -DBENCH_POOL="${BACKEND_POOL:-1}" \
   -I"$NCCL_ROOT/include" "$task_dir/gin_nixl_bench.cu" \
   -L"$NCCL_ROOT/lib" -Xlinker -rpath -Xlinker "$NCCL_ROOT/lib" \
   -lnccl -lcuda -ldl -o "$task_binary"

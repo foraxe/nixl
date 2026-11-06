@@ -19,6 +19,9 @@
 #ifndef GET_PERF_TERMINAL_GATE
 #define GET_PERF_TERMINAL_GATE 0
 #endif
+#ifndef COOP_FAIL_STAGE
+#define COOP_FAIL_STAGE 0
+#endif
 
 namespace {
 thread_local std::string last_error;
@@ -47,7 +50,12 @@ struct Context {
     cudaEvent_t retired{};
     cudaStream_t stream{};
     uint64_t *stats = nullptr;
+    uint32_t stats_lanes = 1, pool_count = 1;
+    std::string peer;
+    std::vector<uint64_t> remote_addresses, remote_lengths;
+    uint32_t remote_gpu = 0;
     bool has_work = false, poisoned = false;
+    bool in_pool_group = false;
 };
 
 cudaError_t record_retirement(Context &context, cudaStream_t stream) {
@@ -397,7 +405,79 @@ struct ReadGroup {
     uint64_t stagger_ns = 0;
     uint32_t completion_depth = 1;
     bool terminal_wait = false;
+    uint32_t cooperative_ctas = 0;
+    bool pooled = false;
+    std::vector<nixlMemViewH> owned_views;
 };
+// Research control: stripe a prepared set of independent QPs inside ONE CTA.
+// Per-READ error checking and FIFO retirement are retained for every session.
+__global__ void fetch_group_one_cta(const LaneViews *views, uint32_t lanes,
+    const int64_t *ids,uint32_t count,size_t payload,size_t dump,uint32_t table,
+    uint32_t requested_window,uint64_t *stats) {
+    using Session=nixl::gpu::readSession;
+    __shared__ __align__(16) unsigned char storage[64*sizeof(Session)];
+    __shared__ uint64_t base[64];
+    __shared__ uint32_t operations[64],failed;
+    auto *sessions=reinterpret_cast<Session*>(storage);
+    const unsigned tid=threadIdx.x,chunk=(count+lanes-1)/lanes;
+    const unsigned group_size=(lanes+gridDim.x-1)/gridDim.x;
+    const unsigned lane_base=blockIdx.x*group_size;
+    if(lane_base>=lanes)return;
+    lanes=min(group_size,lanes-lane_base);views+=lane_base;stats+=lane_base*8;
+    __shared__ uint64_t phase;
+    const unsigned window=min(requested_window,chunk);
+    if(tid==0)failed=0;
+    for(unsigned j=tid;j<lanes*8;j+=blockDim.x)stats[j]=0;
+    __syncthreads();
+    if(tid<lanes){::new(sessions+tid)Session{};
+        if(sessions[tid].bind(views[tid].local,views[tid].remote)!=NIXL_SUCCESS||
+           sessions[tid].acquire()!=NIXL_SUCCESS)atomicExch(&failed,1u);
+        stats[tid*8+7]=sessions[tid].capacity();}
+    __syncthreads();
+    for(unsigned offset=0;offset<chunk;offset+=window){
+        if(__syncthreads_or(failed!=0))break;
+        if(tid==0)phase=timer_ns();
+        if(tid<lanes){const unsigned start=(lane_base+tid)*chunk+offset;
+            operations[tid]=start<count?min(window,min(chunk-offset,count-start)):0;
+            if(operations[tid]&&sessions[tid].reserve(operations[tid],base[tid])!=NIXL_SUCCESS)atomicExch(&failed,2u);}
+        if(__syncthreads_or(failed!=0))break;
+        for(unsigned j=tid;j<lanes*window;j+=blockDim.x){const unsigned q=j/window,k=j%window;
+            if(k<operations[q]){const unsigned query=(lane_base+q)*chunk+offset+k;
+                if(COOP_FAIL_STAGE==3&&blockIdx.x==0&&j==0){atomicExch(&failed,3u);continue;}
+                if(ids[query]<0||uint64_t(ids[query])>=8192||
+                   sessions[q].prepare(base[q]+k,table,size_t(ids[query])*264,
+                       0,payload+size_t(query)*264,264)!=NIXL_SUCCESS)atomicExch(&failed,3u);}}
+        if(__syncthreads_or(failed!=0))break;
+        if(tid<lanes&&operations[tid]&&sessions[tid].publish(base[tid],operations[tid])!=NIXL_IN_PROG)atomicExch(&failed,4u);
+        const int publish_failed=__syncthreads_or(failed!=0);
+        if(tid==0){stats[1]+=timer_ns()-phase;phase=timer_ns();}
+        // Test-only arrival skew: another warp may observe an error while this
+        // warp is delayed. The decision above must remain uniform, not re-read failed.
+        if(COOP_FAIL_STAGE==5&&tid>=32&&tid<64){const auto until=timer_ns()+1000000;while(timer_ns()<until)__nanosleep(32);}
+        if(publish_failed)break;
+        for(unsigned j=tid;j<lanes*window;j+=blockDim.x){const unsigned q=j/window,k=j%window;
+            if(k<operations[q]){const auto deadline=timer_ns()+8000000000ULL;nixl_status_t rc;
+                if(COOP_FAIL_STAGE==5&&blockIdx.x==0&&j==0){atomicExch(&failed,5u);continue;}
+                do{rc=sessions[q].poll(base[q]+k);}while(rc==NIXL_IN_PROG&&timer_ns()<deadline);
+                if(rc!=NIXL_SUCCESS)atomicExch(&failed,5u);}}
+        if(__syncthreads_or(failed!=0))break;
+        if(tid<lanes&&operations[tid]){auto&s=sessions[tid];
+            if(s.retire(base[tid],operations[tid])!=NIXL_SUCCESS)atomicExch(&failed,6u);
+            else{stats[tid*8+4]+=operations[tid];++stats[tid*8+6];}
+            if(s.needsConsistency()){uint64_t ticket;auto rc=s.postConsistency(0,dump+lane_base+tid,ticket);
+                if(rc==NIXL_IN_PROG){const auto deadline=timer_ns()+8000000000ULL;
+                    ++stats[tid*8+5];
+                    do{rc=s.poll(ticket);}while(rc==NIXL_IN_PROG&&timer_ns()<deadline);
+                    if(rc!=NIXL_SUCCESS||s.retire(ticket,1)!=NIXL_SUCCESS)atomicExch(&failed,7u);
+                }else atomicExch(&failed,7u);}}
+        __syncthreads();
+        if(tid==0)stats[2]+=timer_ns()-phase;
+    }
+    const int prior_failed=__syncthreads_or(failed!=0);
+    if(tid<lanes){if(!prior_failed&&sessions[tid].finish()!=NIXL_SUCCESS)atomicExch(&failed,8u);}
+    __syncthreads();
+    if(tid<lanes){stats[tid*8]=failed;if(failed)sessions[tid].fail();}
+}
 template<bool Pending, uint32_t CompletionDepth = 1, bool TerminalWait = false>
 __global__ void fetch_group_rows(const LaneViews *views, const int64_t *ids,
     uint32_t count, size_t payload, size_t dump, uint32_t table, uint32_t window,
@@ -438,6 +518,10 @@ extern "C" void *engram_create(uint32_t gpu, uint16_t port, const char *name) {
                                {"oob_port", std::to_string(port)}};
         if (const char *value = std::getenv("GPUNETIO_DEVICE_API_RELAXED_ORDERING"))
             params["native_relaxed_ordering"] = value;
+        if (const char *value = std::getenv("GPUNETIO_NATIVE_QPS")) {
+            params["native_qp_count"] = value;
+            c->pool_count = std::stoul(value);
+        }
         for (auto item : {std::pair{"GPUNETIO_DEVICE_API_RDMA", "network_devices"},
                           std::pair{"GPUNETIO_DEVICE_API_OOB_INTERFACE", "oob_interface"},
                           std::pair{"GPUNETIO_DEVICE_API_GID_INDEX", "gid_index"}}) {
@@ -493,6 +577,10 @@ extern "C" int engram_connect(void *handle, const char *md, size_t md_size,
         nixl_remote_dlist_t remote(DRAM_SEG);
         for (uint32_t i = 0; i < count; ++i) remote.addDesc({addresses[i], lengths[i], remote_gpu, peer});
         require(c.agent->prepMemView(remote, c.remote, &c.hint), "remote view");
+        c.peer = peer;
+        c.remote_gpu = remote_gpu;
+        c.remote_addresses.assign(addresses, addresses + count);
+        c.remote_lengths.assign(lengths, lengths + count);
     });
 }
 static int fetch_impl(void *handle, uint64_t ids, uint32_t count,
@@ -503,6 +591,7 @@ static int fetch_impl(void *handle, uint64_t ids, uint32_t count,
     return guarded([&] {
         auto &c = *static_cast<Context *>(handle);
         auto s = reinterpret_cast<cudaStream_t>(stream);
+        if(c.in_pool_group)throw std::runtime_error("context is borrowed by a prepared pool group");
         if ((pending && (window_rows < 4 || window_rows > 1024 || window_rows % 4)) ||
             !c.remote || !c.local || c.poisoned || !count || !ids || !stats || row_lo > row_hi ||
             payload_offset > c.arena_bytes ||
@@ -531,6 +620,7 @@ static int fetch_impl(void *handle, uint64_t ids, uint32_t count,
         }
         c.stream = s;
         c.stats = reinterpret_cast<uint64_t *>(stats);
+        c.stats_lanes = 1;
         if (pending) {
             fetch_rows_cooperative<true, true><<<1, 128, 0, s>>>(reinterpret_cast<const int64_t *>(ids), count,
                 payload_offset, scale_offset, dump_offset, weight_index, scale_index,
@@ -589,6 +679,11 @@ extern "C" int engram_set_trace(void *handle, uint64_t ptr) {
 extern "C" int engram_read_group_terminal(void *handle, int enabled) {
     return guarded([&] { static_cast<ReadGroup *>(handle)->terminal_wait = enabled != 0; });
 }
+extern "C" int engram_read_group_single_cta(void *handle, int enabled) {
+    return guarded([&] { auto*g=static_cast<ReadGroup *>(handle);
+        if(!g||enabled<1||uint32_t(enabled)>g->contexts.size())throw std::runtime_error("invalid cooperative CTA count");
+        g->cooperative_ctas = enabled; });
+}
 extern "C" int engram_read_group_pipeline(void *handle, uint32_t depth) {
     return guarded([&] { if (depth != 1 && depth != 2) throw std::runtime_error("unsupported completion depth");
         static_cast<ReadGroup *>(handle)->completion_depth = depth; });
@@ -601,12 +696,12 @@ extern "C" int engram_read_group_stagger(void *handle, uint64_t delay_ns) {
 extern "C" void *engram_read_group_create(void **handles, uint32_t count) {
     ReadGroup *result = nullptr;
     guarded([&] {
-        if (!handles || count == 0 || count > 16) throw std::runtime_error("invalid READ group");
+        if (!handles || count == 0 || count > 64) throw std::runtime_error("invalid READ group");
         auto group = std::make_unique<ReadGroup>();
         std::vector<LaneViews> views;
         for (uint32_t i = 0; i < count; ++i) {
             auto *c = static_cast<Context *>(handles[i]);
-            if (!c || !c->local || !c->remote || c->poisoned ||
+            if (!c || !c->local || !c->remote || c->poisoned || c->in_pool_group ||
                 (i && (c->gpu != group->contexts[0]->gpu ||
                        c->arena_address != group->contexts[0]->arena_address ||
                        c->arena_bytes != group->contexts[0]->arena_bytes)) ||
@@ -621,6 +716,45 @@ extern "C" void *engram_read_group_create(void **handles, uint32_t count) {
         const auto rc = cudaMemcpy(group->device_views, views.data(), count * sizeof(LaneViews), cudaMemcpyHostToDevice);
         if (rc != cudaSuccess) { cudaFree(group->device_views); check(rc, "publish READ views"); }
         result = group.release();
+    });
+    return result;
+}
+// One prepared backend, one registration and one completion event per rank.
+// Channel views are ordinary NIXL views prepared once; the GPU API is unchanged.
+extern "C" void *engram_pool_group_create(void *handle, uint32_t count) {
+    ReadGroup *result = nullptr;
+    guarded([&] {
+        auto &c = *static_cast<Context *>(handle);
+        if(!count || count != c.pool_count || !c.local || !c.remote || c.has_work || c.in_pool_group)
+            throw std::runtime_error("invalid prepared pool");
+        auto group = std::make_unique<ReadGroup>();
+        group->pooled = true;group->gpu = c.gpu;
+        std::vector<LaneViews> views;
+        try {
+            for(uint32_t channel=0;channel<count;++channel) {
+                nixlMemViewH local=c.local,remote=c.remote;
+                if(channel) {
+                    auto hint=c.hint;hint.customParam="native_channel="+std::to_string(channel);
+                    nixl_local_dlist_t l(VRAM_SEG);l.addDesc({c.arena_address,c.arena_bytes,c.gpu});
+                    require(c.agent->prepMemView(l,local,&hint),"prepare pool destination view");
+                    group->owned_views.push_back(local);
+                    nixl_remote_dlist_t r(DRAM_SEG);
+                    for(size_t i=0;i<c.remote_addresses.size();++i)
+                        r.addDesc({c.remote_addresses[i],c.remote_lengths[i],c.remote_gpu,c.peer});
+                    require(c.agent->prepMemView(r,remote,&hint),"prepare pool source view");
+                    group->owned_views.push_back(remote);
+                }
+                group->contexts.push_back(&c);views.push_back({local,remote,c.trace,c.cost_trace});
+            }
+            check(cudaMalloc(reinterpret_cast<void **>(&group->device_views),count*sizeof(LaneViews)),"allocate prepared pool");
+            check(cudaMemcpy(group->device_views,views.data(),count*sizeof(LaneViews),cudaMemcpyHostToDevice),"publish prepared pool");
+        } catch(...) {
+            if(group->device_views)cudaFree(group->device_views);
+            for(auto view:group->owned_views)c.agent->releaseMemView(view);
+            throw;
+        }
+        c.in_pool_group = true;
+        result=group.release();
     });
     return result;
 }
@@ -652,7 +786,14 @@ static int read_group_fetch_impl(void *handle, uint64_t ids, uint32_t count,
                 check(cudaStreamWaitEvent(s, c.retired, 0), "order READ group retirement");
             }
         }
-        if (group->terminal_wait && group->completion_depth == 2) {
+        if (group->cooperative_ctas) {
+            if(pending||representative_ptr||query_list_ptr||lo!=0||hi!=8192||
+               group->completion_depth!=1||group->terminal_wait||group->stagger_ns)
+                throw std::runtime_error("single-CTA research control requires full packed rows");
+            fetch_group_one_cta<<<min(active,group->cooperative_ctas),128,0,s>>>(group->device_views,active,
+                reinterpret_cast<const int64_t*>(ids),count,payload,dump,table,window,
+                reinterpret_cast<uint64_t*>(stats));
+        } else if (group->terminal_wait && group->completion_depth == 2) {
             if (pending) fetch_group_rows<true, 2, true><<<active, 128, 0, s>>>(group->device_views,
                 reinterpret_cast<const int64_t *>(ids), count, payload, dump, table, window,
                 lo, hi, reinterpret_cast<uint64_t *>(stats), group->stagger_ns, reinterpret_cast<const int64_t *>(representative_ptr), reinterpret_cast<const int64_t *>(query_list_ptr), reinterpret_cast<const uint64_t *>(list_count_ptr));
@@ -680,14 +821,15 @@ static int read_group_fetch_impl(void *handle, uint64_t ids, uint32_t count,
             reinterpret_cast<const int64_t *>(ids), count, payload, dump, table, window,
             lo, hi, reinterpret_cast<uint64_t *>(stats), group->stagger_ns, reinterpret_cast<const int64_t *>(representative_ptr), reinterpret_cast<const int64_t *>(query_list_ptr), reinterpret_cast<const uint64_t *>(list_count_ptr));
         const auto launch = cudaGetLastError();
-        for (uint32_t i = 0; i < active; ++i) {
+        for (uint32_t i = 0; i < (group->pooled ? 1u : active); ++i) {
             auto &c = *group->contexts[i];
             c.has_work = true; c.stream = s;
             c.stats = reinterpret_cast<uint64_t *>(stats) + i * 8;
+            c.stats_lanes = group->pooled ? active : 1;
             if (launch != cudaSuccess) c.poisoned = true;
         }
         cudaError_t retirement = cudaSuccess;
-        for (uint32_t i = 0; i < active; ++i) {
+        for (uint32_t i = 0; i < (group->pooled ? 1u : active); ++i) {
             auto &c = *group->contexts[i];
             const auto rc = record_retirement(c, s);
             if (rc != cudaSuccess) { c.poisoned = true; retirement = rc; }
@@ -718,7 +860,15 @@ extern "C" int engram_read_group_destroy(void *handle) {
         if (!group) return;
         check(cudaSetDevice(group->gpu), "select READ group device");
         check(cudaDeviceSynchronize(), "retire READ group");
+        if(group->pooled) {
+            auto &c=*group->contexts[0];
+            if(c.has_work){std::vector<uint64_t> stats(c.stats_lanes*8);
+                check(cudaMemcpy(stats.data(),c.stats,stats.size()*sizeof(uint64_t),cudaMemcpyDeviceToHost),"read pool completion errors");
+                for(uint32_t q=0;q<c.stats_lanes;++q)if(stats[q*8]){c.poisoned=true;throw std::runtime_error("failed pool quarantined; retain views and buffers");}}
+            for(auto view:group->owned_views)c.agent->releaseMemView(view);
+        }
         check(cudaFree(group->device_views), "free READ views");
+        if(group->pooled)group->contexts[0]->in_pool_group=false;
         delete group;
     });
 }
@@ -726,15 +876,17 @@ extern "C" int engram_destroy(void *handle) {
     if (!handle) return 0;
     return guarded([&] {
         auto *c = static_cast<Context *>(handle);
+        if(c->in_pool_group)throw std::runtime_error("destroy the prepared pool group first");
         check(cudaSetDevice(c->gpu), "select context device");
         if (c->poisoned) throw std::runtime_error("failed context quarantined; retain buffers until process exit");
         if (c->has_work) {
             // Teardown also drains consumers of raw scratch and graph replays;
             // a captured-but-unreplayed event is not the right teardown fence.
             check(cudaDeviceSynchronize(), "retire lookup and consumer GPU work");
-            uint64_t error = 0;
-            check(cudaMemcpy(&error, c->stats, sizeof(error), cudaMemcpyDeviceToHost), "read completion error");
-            if (error) {
+            std::vector<uint64_t> errors(c->stats_lanes*8);
+            check(cudaMemcpy(errors.data(), c->stats, errors.size()*sizeof(uint64_t), cudaMemcpyDeviceToHost), "read completion error");
+            bool failed=false;for(uint32_t q=0;q<c->stats_lanes;++q)failed=failed||errors[q*8]!=0;
+            if (failed) {
                 c->poisoned = true;
                 throw std::runtime_error("failed request quarantined; retain buffers until process exit");
             }
