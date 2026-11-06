@@ -1,0 +1,34 @@
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_b02aaaf0b0d64c::t_e562ba4fd57ccb 1550-1552,1556
+  s_b02aaaf0b0d64c::t_ba3236cbfda1a3 1539-1541,1543-1545,1547-1549,1553-1555,1559,1561,1565-1567,1569,1571,1573,1575,1587-1589,1604-1606,1612-1614
+  s_b02aaaf0b0d64c::t_c439822494dbd0 1537-1538,1546,1557-1558,1560,1562-1564,1568,1570,1572,1574,1576-1586,1590-1592
+  s_b02aaaf0b0d64c::t_8eaad7e1e82e01 1602-1603,1607-1611,1615-1616
+  s_b02aaaf0b0d64c::t_a678cdd28ea441 1542
+  s_b02aaaf0b0d64c::t_07eabc45095eb1 1536
+src/core/agent_data.h
+  s_b02aaaf0b0d64c::t_c439822494dbd0 152
+  s_b02aaaf0b0d64c::t_ba3236cbfda1a3 153-156
+src/plugins/gpunetio/gpunetio_backend.h
+  s_b02aaaf0b0d64c::t_8eaad7e1e82e01 36
+  s_b02aaaf0b0d64c::t_ba3236cbfda1a3 55
+  s_b02aaaf0b0d64c::t_c439822494dbd0 23,33-35
+  s_b02aaaf0b0d64c::t_6c74f80673ad7b 56
+src/plugins/gpunetio/gpunetio_utils.cpp
+  s_b02aaaf0b0d64c::t_c439822494dbd0 455-458
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a073ac61d7298a8c327b0a5c1a269c13a9c94f10",
+  "prompts": {},
+  "sessions": {
+    "s_b02aaaf0b0d64c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a187d1-dc48-7243-b1c5-e64b7d932a1a",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
