@@ -1534,6 +1534,63 @@ nixlDocaEngine::connect(const std::string &remote_agent) {
 }
 
 nixl_status_t
+nixlDocaEngine::retireIdlePeer(const std::string &remote_agent) {
+    // Caller must have stopped the reader and drained all GPU/NIC work.
+    if (!nativeMode_ || !nativeState_) {
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+    nixl::doca::cudaDeviceGuard guard(gdevs[0].first);
+    if (guard.status() != cudaSuccess) {
+        return NIXL_ERR_BACKEND;
+    }
+    std::lock_guard<std::mutex> setup_lock(researchPeerSetupLock);
+    if (researchOutboundInFlight.count(remote_agent)) {
+        return NIXL_IN_PROG;
+    }
+    {
+        std::lock_guard<std::mutex> remote_lock(remoteConnLock);
+        // This prototype handles listener-created owner peers only.
+        if (remoteConnMap.count(remote_agent)) {
+            return NIXL_ERR_NOT_SUPPORTED;
+        }
+    }
+    // prepMemView takes the native-state lock before qpLock.
+    std::lock_guard<std::mutex> state_lock(nativeState_->mutex);
+    if (nativeState_->peer == remote_agent && nativeState_->remoteViews != 0) {
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+    std::scoped_lock lock(connectLock, qpLock);
+    researchRetiredPeers.insert(remote_agent);
+    auto it = qpMap.find(remote_agent);
+    if (it == qpMap.end()) {
+        return NIXL_SUCCESS;
+    }
+    auto *qp = it->second;
+    if (!qp->closeDataQps() || (qp->qp_notif && !qp->qp_notif->close())) {
+        return NIXL_ERR_BACKEND;
+    }
+    if (qp->progress_gpu != nullptr) {
+        if (doca_gpu_mem_free(gdevs[0].second, qp->progress_gpu) != DOCA_SUCCESS) {
+            return NIXL_ERR_BACKEND;
+        }
+        qp->progress_gpu = nullptr;
+    }
+    delete qp;
+    qpMap.erase(it);
+    connMap.erase(remote_agent);
+    return NIXL_SUCCESS;
+}
+
+extern "C" nixl_status_t
+research_gpunetio_retire_idle_peer(nixlBackendEngine *engine, const char *peer) {
+    auto *gpunetio = dynamic_cast<nixlDocaEngine *>(engine);
+    if (!gpunetio || !peer || !*peer) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+    return gpunetio->retireIdlePeer(peer);
+}
+
+nixl_status_t
 nixlDocaEngine::disconnect(const std::string &remote_agent) {
     // Disconnection should be handled here
     return NIXL_SUCCESS;
@@ -1542,6 +1599,21 @@ nixlDocaEngine::disconnect(const std::string &remote_agent) {
 nixl_status_t
 nixlDocaEngine::loadRemoteConnInfo(const std::string &remote_agent,
                                    const std::string &remote_conn_info) {
+    {
+        std::lock_guard<std::mutex> setup_lock(researchPeerSetupLock);
+        if (researchRetiredPeers.count(remote_agent)) {
+            return NIXL_ERR_NOT_SUPPORTED;
+        }
+        ++researchOutboundInFlight[remote_agent];
+    }
+    auto end_setup = [this, &remote_agent](void *) {
+        std::lock_guard<std::mutex> setup_lock(researchPeerSetupLock);
+        auto it = researchOutboundInFlight.find(remote_agent);
+        if (--it->second == 0) {
+            researchOutboundInFlight.erase(it);
+        }
+    };
+    std::unique_ptr<void, decltype(end_setup)> setup_guard(this, end_setup);
 
     int oob_sock_client;
 

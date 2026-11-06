@@ -149,6 +149,11 @@ class nixlBackendH {
         explicit nixlBackendH(nixlBackendEngine *engine) noexcept : engine(engine) {}
 
     public:
+        // Experimental owner-side peer retirement, not a public NIXL API.
+        nixlBackendEngine *
+        researchEngine() const noexcept {
+            return engine;
+        }
         ~nixlBackendH() = default;
 
         // TODO? engine->getType() returns a const nixl_backend_t&

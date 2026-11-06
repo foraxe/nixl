@@ -20,6 +20,7 @@
 
 #include "gpunetio_backend_aux.h"
 #include "gpunetio_device_memview.h"
+#include <unordered_set>
 
 class nixlDocaEngine : public nixlBackendEngine {
 public:
@@ -29,6 +30,10 @@ public:
     mutable std::mutex notifLock;
     mutable std::mutex qpLock;
     std::mutex connectLock;
+    // Research-only: serialize listener setup and owner-side peer retirement.
+    std::mutex researchPeerSetupLock;
+    std::unordered_set<std::string> researchRetiredPeers;
+    std::unordered_map<std::string, size_t> researchOutboundInFlight;
     mutable std::mutex remoteConnLock;
     std::vector<std::pair<uint32_t, doca_gpu *>> gdevs; /* List of DOCA GPUNetIO device handlers */
     doca_dev *ddev = nullptr; /* DOCA device handler associated to queues */
@@ -46,6 +51,8 @@ public:
 
     nixl_status_t
     addRdmaQp(const std::string &remote_agent);
+    nixl_status_t
+    retireIdlePeer(const std::string &remote_agent);
     nixl_status_t
     connectServerRdmaQp(int oob_sock_client, const std::string &remote_agent);
     nixl_status_t
