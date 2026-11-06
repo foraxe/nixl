@@ -1,0 +1,427 @@
+{
+  "status": "PASS",
+  "measured_pipelines": 7200,
+  "warmup_pipelines": 1440,
+  "identities": {
+    "gin_nixl_bench.cu": "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9",
+    "gin_nixl_bench_gate": "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a",
+    "adapter_gate.so": "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff",
+    "libnccl.so.2": "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320",
+    "engram_native_nixl35.cu": "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17",
+    "libplugin_GPUNETIO.so": "7858051a3a4b53c7170f219966a2da9bffb0c86e707db0a087ba785158bdc2e7"
+  },
+  "matrix": {
+    "384": {
+      "eager": {
+        "latency_ns": {
+          "gdaki_median_us": 590.5795,
+          "nixl_median_us": 331.586,
+          "nixl_reduction_pct": 43.854129714966405,
+          "per_bracket_reduction_pct": [
+            43.30114835500585,
+            43.94636229032716,
+            44.11367430118498
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 582.787,
+                "post_us": 595.5875000000001,
+                "drift_pct": 2.1725690771482333
+              },
+              "nixl": {
+                "pre_us": 792.452,
+                "post_us": 790.436,
+                "drift_pct": 0.25472427613324033
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 592.5790000000001,
+                "post_us": 583.363,
+                "drift_pct": 1.5674242437127015
+              },
+              "nixl": {
+                "pre_us": 781.2045,
+                "post_us": 789.316,
+                "drift_pct": 1.0329696428668047
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 592.7719999999999,
+                "post_us": 591.043,
+                "drift_pct": 0.292106452443993
+              },
+              "nixl": {
+                "pre_us": 791.781,
+                "post_us": 779.844,
+                "drift_pct": 1.519064662371736
+              }
+            }
+          ]
+        },
+        "gpu_us": {
+          "gdaki_median_us": 581.056,
+          "nixl_median_us": 322.048,
+          "nixl_reduction_pct": 44.57539376583325,
+          "per_bracket_reduction_pct": [
+            43.96880657290072,
+            44.66371657092597,
+            44.83136524288336
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 573.328,
+                "post_us": 586.0319999999999,
+                "drift_pct": 2.1915539608059538
+              },
+              "nixl": {
+                "pre_us": 782.912,
+                "post_us": 780.768,
+                "drift_pct": 0.27422490535147925
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 583.2,
+                "post_us": 573.7439999999999,
+                "drift_pct": 1.634651288221406
+              },
+              "nixl": {
+                "pre_us": 771.488,
+                "post_us": 779.6800000000001,
+                "drift_pct": 1.0562363328794826
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 583.04,
+                "post_us": 581.9359999999999,
+                "drift_pct": 0.18953180151351479
+              },
+              "nixl": {
+                "pre_us": 782.624,
+                "post_us": 770.3199999999999,
+                "drift_pct": 1.5846031795093818
+              }
+            }
+          ]
+        }
+      },
+      "graph": {
+        "latency_ns": {
+          "gdaki_median_us": 589.1875,
+          "nixl_median_us": 330.882,
+          "nixl_reduction_pct": 43.84096743396627,
+          "per_bracket_reduction_pct": [
+            43.093772566280386,
+            44.05655192241022,
+            44.23797022422432
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 581.1400000000001,
+                "post_us": 591.892,
+                "drift_pct": 1.8331980713228542
+              },
+              "nixl": {
+                "pre_us": 791.4925000000001,
+                "post_us": 789.348,
+                "drift_pct": 0.2713113688572765
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 591.108,
+                "post_us": 581.9235,
+                "drift_pct": 1.565942602564374
+              },
+              "nixl": {
+                "pre_us": 785.5565,
+                "post_us": 791.1885,
+                "drift_pct": 0.7143831120441096
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 589.2040000000001,
+                "post_us": 588.995,
+                "drift_pct": 0.03547787767602247
+              },
+              "nixl": {
+                "pre_us": 790.0525,
+                "post_us": 779.7484999999999,
+                "drift_pct": 1.3127778616525392
+              }
+            }
+          ]
+        },
+        "gpu_us": {
+          "gdaki_median_us": 579.7760000000001,
+          "nixl_median_us": 321.12,
+          "nixl_reduction_pct": 44.61309195275417,
+          "per_bracket_reduction_pct": [
+            43.839028349145046,
+            44.76617764443589,
+            45.00068502534593
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 571.52,
+                "post_us": 582.4159999999999,
+                "drift_pct": 1.8884929493490035
+              },
+              "nixl": {
+                "pre_us": 782.352,
+                "post_us": 779.8240000000001,
+                "drift_pct": 0.32365111229463345
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 581.44,
+                "post_us": 572.2080000000001,
+                "drift_pct": 1.6004881905052442
+              },
+              "nixl": {
+                "pre_us": 775.6800000000001,
+                "post_us": 781.7919999999999,
+                "drift_pct": 0.7848616219103589
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 579.6,
+                "post_us": 579.5360000000001,
+                "drift_pct": 0.011042707671915035
+              },
+              "nixl": {
+                "pre_us": 780.56,
+                "post_us": 769.9359999999999,
+                "drift_pct": 1.3704001816193043
+              }
+            }
+          ]
+        }
+      }
+    },
+    "4096": {
+      "eager": {
+        "latency_ns": {
+          "gdaki_median_us": 6824.262500000001,
+          "nixl_median_us": 3255.5225,
+          "nixl_reduction_pct": 52.29488168135386,
+          "per_bracket_reduction_pct": [
+            51.56004312619844,
+            52.339849276625316,
+            52.477136242420386
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 6722.2135,
+                "post_us": 6860.486500000001,
+                "drift_pct": 2.0360164032188157
+              },
+              "nixl": {
+                "pre_us": 6664.9175000000005,
+                "post_us": 6591.9890000000005,
+                "drift_pct": 1.1002340553582388
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6824.279500000001,
+                "post_us": 6700.775,
+                "drift_pct": 1.8263068736617796
+              },
+              "nixl": {
+                "pre_us": 6305.956,
+                "post_us": 6455.6215,
+                "drift_pct": 2.3455642533221317
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6815.928,
+                "post_us": 6828.487000000001,
+                "drift_pct": 0.1840899738098131
+              },
+              "nixl": {
+                "pre_us": 6381.0615,
+                "post_us": 6460.405000000001,
+                "drift_pct": 1.2357389243666346
+              }
+            }
+          ]
+        },
+        "gpu_us": {
+          "gdaki_median_us": 6814.305,
+          "nixl_median_us": 3245.825,
+          "nixl_reduction_pct": 52.36748281739665,
+          "per_bracket_reduction_pct": [
+            51.635103795294924,
+            52.41328444666345,
+            52.55538810940801
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 6712.175,
+                "post_us": 6851.345,
+                "drift_pct": 2.052122162978343
+              },
+              "nixl": {
+                "pre_us": 6655.280000000001,
+                "post_us": 6582.035,
+                "drift_pct": 1.1066443610354637
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6814.575,
+                "post_us": 6690.75,
+                "drift_pct": 1.8337211433267961
+              },
+              "nixl": {
+                "pre_us": 6296.16,
+                "post_us": 6445.84,
+                "drift_pct": 2.3493956992622866
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6805.8099999999995,
+                "post_us": 6818.82,
+                "drift_pct": 0.19097766324663817
+              },
+              "nixl": {
+                "pre_us": 6371.505,
+                "post_us": 6450.32,
+                "drift_pct": 1.229388172120577
+              }
+            }
+          ]
+        }
+      },
+      "graph": {
+        "latency_ns": {
+          "gdaki_median_us": 6813.7345000000005,
+          "nixl_median_us": 3252.659,
+          "nixl_reduction_pct": 52.26319722319677,
+          "per_bracket_reduction_pct": [
+            51.50960611678514,
+            52.27932026602573,
+            52.48506158378237
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 6711.109,
+                "post_us": 6861.271000000001,
+                "drift_pct": 2.212758558189503
+              },
+              "nixl": {
+                "pre_us": 6680.8375,
+                "post_us": 6531.3330000000005,
+                "drift_pct": 2.263133071133151
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6818.1505,
+                "post_us": 6701.9425,
+                "drift_pct": 1.7190414296706336
+              },
+              "nixl": {
+                "pre_us": 6360.42,
+                "post_us": 6443.1895,
+                "drift_pct": 1.2929088473059154
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6819.96,
+                "post_us": 6823.575000000001,
+                "drift_pct": 0.05299213143808685
+              },
+              "nixl": {
+                "pre_us": 6362.149,
+                "post_us": 6547.061,
+                "drift_pct": 2.8648073739601316
+              }
+            }
+          ]
+        },
+        "gpu_us": {
+          "gdaki_median_us": 6804.115,
+          "nixl_median_us": 3242.85,
+          "nixl_reduction_pct": 52.33987079877398,
+          "per_bracket_reduction_pct": [
+            51.584127593211534,
+            52.354972375690615,
+            52.55957176465771
+          ],
+          "paired_nixl_wins": 300,
+          "pairs": 300,
+          "strict_controls": [
+            {
+              "gin": {
+                "pre_us": 6700.844999999999,
+                "post_us": 6851.264999999999,
+                "drift_pct": 2.2198757241492295
+              },
+              "nixl": {
+                "pre_us": 6670.8150000000005,
+                "post_us": 6521.389999999999,
+                "drift_pct": 2.2653529110562047
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6808.4,
+                "post_us": 6692.08,
+                "drift_pct": 1.7231979899973884
+              },
+              "nixl": {
+                "pre_us": 6350.639999999999,
+                "post_us": 6433.55,
+                "drift_pct": 1.2970708351487388
+              }
+            },
+            {
+              "gin": {
+                "pre_us": 6810.24,
+                "post_us": 6813.52,
+                "drift_pct": 0.048151171189167376
+              },
+              "nixl": {
+                "pre_us": 6352.195,
+                "post_us": 6536.625,
+                "drift_pct": 2.861860123735149
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

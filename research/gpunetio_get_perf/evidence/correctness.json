@@ -1,0 +1,45 @@
+{
+  "description": "Selected validation lines; full hardware logs retained locally",
+  "cases": {
+    "access-policy": {
+      "raw_log_sha256": "48173d481c46fb10afbecd5a7d47900f3fb445276f15afc01f71010ec138bdca",
+      "markers": [
+        "PASS strict/relaxed registration, strict retry, and complete failure"
+      ]
+    },
+    "relaxed-DRAM": {
+      "raw_log_sha256": "572d95652b906c0ce2b9a86c721a10689846a46762ac642b64359b445c3481e0",
+      "markers": [
+        "I1106 02:31:33.831199   80052 gpunetio_backend.cpp:1683] GPUNETIO native data MR relaxed ordering=true",
+        "PASS DRAM scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "relaxed-VRAM": {
+      "raw_log_sha256": "389447b65b9e74e3b2de76dcce73d2b2ec3351e131a5bf47d5780d74a1fb8c8b",
+      "markers": [
+        "I1106 02:31:36.001396   80108 gpunetio_backend.cpp:1683] GPUNETIO native data MR relaxed ordering=true",
+        "I1106 02:31:36.001707   80108 gpunetio_backend.cpp:1683] GPUNETIO native data MR relaxed ordering=true",
+        "PASS VRAM scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "strict-DRAM": {
+      "raw_log_sha256": "287ca262268a37534615f6833f944391dde486781bc0ae12d24cb434f39d59ac",
+      "markers": [
+        "I1106 02:31:29.528776   79913 gpunetio_backend.cpp:1683] GPUNETIO native data MR relaxed ordering=false",
+        "PASS DRAM scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    "strict-VRAM": {
+      "raw_log_sha256": "07b56cec4eff8b937e2fe1e0615b93f7413c60f71e84bcb339deec270f46884d",
+      "markers": [
+        "I1106 02:31:31.638775   79998 gpunetio_backend.cpp:1683] GPUNETIO native data MR relaxed ordering=false",
+        "I1106 02:31:31.638881   79998 gpunetio_backend.cpp:1683] GPUNETIO native data MR relaxed ordering=false",
+        "PASS VRAM scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    }
+  },
+  "binary_hashes": [
+    "a3fe5d809a0c4f060ecedf248e056b4b9d61eb2cf4953bd1d4d7271f05dcc041  /workspace/gpunetio/kernel-copy-tools/get-perf/device_get_test",
+    "7858051a3a4b53c7170f219966a2da9bffb0c86e707db0a087ba785158bdc2e7  /workspace/gpunetio/kernel-copy-tools/get-perf/build/src/plugins/gpunetio/libplugin_GPUNETIO.so"
+  ]
+}
