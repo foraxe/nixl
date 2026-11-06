@@ -1612,6 +1612,11 @@ nixlDocaEngine::retireIdlePeer(const std::string &remote_agent) {
         researchRetiredPeers.insert(remote_agent);
     }
     std::scoped_lock lock(connectLock, qpLock);
+    // A failed constructor may retain resources without a qpMap entry.
+    // Do not report a peer safely retired while engine rollback is uncertain.
+    if (retainedQp_ || qpRollbackFailed_) {
+        return NIXL_ERR_BACKEND;
+    }
     auto it = qpMap.find(remote_agent);
     if (it == qpMap.end()) {
         return NIXL_SUCCESS;
