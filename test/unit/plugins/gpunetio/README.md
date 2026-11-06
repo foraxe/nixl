@@ -1,5 +1,56 @@
 # DOCA plugin unit test
 
+## Native pool qualification
+
+`native_qp_count=1` is the default. Native mode accepts1..32 active READ
+channels per backend, selected once at view preparation with
+`hint.customParam="native_channel=N"`. The GPU API/device-view ABI is unchanged.
+Use matching channel views; channels are independently ordered, even with
+strict registrations. Native pools still support one peer per engine.
+
+Set `NIXL_GPUNETIO_TEST_QPS=4` or32 to exercise the owned pool in the hardware
+GET test below. It checks distinct lane/QP identities, mixed-channel rejection,
+generation preservation on re-preparation/MD reload, immediate GPU consumption,
+and repeated SQ/CQ wrap on every channel. The default remains the one-QP test.
+
+The following are disposable-process fault modes; failed resources stay alive
+until process exit, not normal resource reclamation or recovery:
+
+- `NIXL_GPUNETIO_TEST_PEER_QPS=N` differing from the reader count requires
+  setup rejection during metadata/OOB exchange.
+- `NIXL_GPUNETIO_TEST_RETENTION=1` poisons the last channel and checks idle
+  view release plus failed-channel retention. Run under memory checking.
+- Add `NIXL_GPUNETIO_TEST_CQ_ERROR=1` to use a real invalid-rkey READ instead
+  of synthetic poisoning. It requires a CQ error, sticky refusal and continued
+  healthy-channel progress before testing retention.
+
+`nixl_gpunetio_native_pool_options_test` is a CPU-only parser test with no
+GPU/network dependency. It covers all supported sizes/channels and invalid
+syntax/bounds/binary blobs.
+
+## Native GET memory ordering
+
+`native_relaxed_ordering=true` is an optional backend parameter, valid only
+with `native_device_api=true`. It requests `IBV_ACCESS_RELAXED_ORDERING` for
+registered VRAM data buffers. The default is false. Host source buffers and
+internal notification/control registrations stay strict. Both DMA-BUF and
+PeerDirect paths retry strict registration if relaxed registration fails.
+`NIXL_LOG_LEVEL=info` reports the accepted ordering of native VRAM MRs.
+
+This opt-in is suitable for GET into non-overlapping destination ranges,
+followed by completion and the required acquire before consuming the data.
+Do not issue overlapping destination writes/reads while prior transfers are
+in flight: relaxed ordering does not preserve write-after-write order. It
+does not remove CQ error checks or change completion visibility guarantees;
+see the [rdma-core registration contract](https://github.com/linux-rdma/rdma-core/blob/master/libibverbs/man/ibv_reg_mr.3).
+
+The CPU registration-access test covers default strict flags, relaxed flags,
+strict retry, and total failure for the callback shared by both registration
+paths. Run the GPU GET test both with the default and with
+`NIXL_GPUNETIO_TEST_RELAXED_ORDERING=1`. It checks immediate in-kernel
+consumption after scalar and batch completion, repeated poisoned buffers
+across SQ/CQ wrap, data/guards, invalid descriptors and invalid options.
+
 Unit test application for the DOCA GPUNetIO backend plugin. It enables a GPU to GPU communications between initiator and target using the GPUDirect Async Kernel-Initiated (GDAKI) technology through the [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html) library.
 
 Initiator and target communicate over the network using the DOCA GPUNetIO plugin, so both processes should run on a system with a GPU. Initiator and target exchange a sequence of metadata and notifications for the setup then initiator posts twice the same transfer request with 32 buffers, with a value for the first transfer and updated value for the second transfer.

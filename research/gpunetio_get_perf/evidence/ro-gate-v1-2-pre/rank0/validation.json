@@ -1,0 +1,41 @@
+{
+  "description": "Selected source-log markers and configuration; not a full log",
+  "raw_stdout_sha256": "2095aac99d86893381b8cbdc4c5a322a9ff032a733d2f6f111c2a348d661467d",
+  "raw_provenance_sha256": "4c914314de161ee95c7e0d49cb89abcff0752e9b9f023a0baa5706496a58a349",
+  "markers": [
+    "GDAKI_VERIFIED rank=0 device_type=3 contexts=1 nic_handler=2 nccl=23203 library=/workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+    "CLEAN_CLOSE rank=0"
+  ],
+  "provenance": [
+    "NCCL_ROOT=/workspace/gpunetio/nccl-core-workload/build",
+    "NIXL_SHIM=/workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+    "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  gin_nixl_bench.cu",
+    "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  gin_nixl_bench_gate",
+    "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  adapter_gate.so",
+    "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  libnccl.so.2",
+    "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  engram_native_nixl35.cu",
+    "7858051a3a4b53c7170f219966a2da9bffb0c86e707db0a087ba785158bdc2e7  libplugin_GPUNETIO.so",
+    "CUDA_VISIBLE_DEVICES=0",
+    "GPUNETIO_DEVICE_API_GID_INDEX=3",
+    "GPUNETIO_DEVICE_API_OOB_INTERFACE=lo",
+    "GPUNETIO_DEVICE_API_RDMA=mlx5_0",
+    "GPUNETIO_DEVICE_API_RELAXED_ORDERING=false",
+    "NCCL_DEBUG=INFO",
+    "NCCL_DEBUG_FILE=/workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/results/ro-gate-v1-2-pre/rank0/nccl.%h.%p.log",
+    "NCCL_DEBUG_SUBSYS=INIT,NET,REG",
+    "NCCL_GIN_GDAKI_NIC_HANDLER=2",
+    "NCCL_GIN_GDAKI_QP_DEPTH=2048",
+    "NCCL_GIN_TYPE=3",
+    "NCCL_IB_GID_INDEX=3",
+    "NCCL_IB_HCA==mlx5_0",
+    "NCCL_LSA_TEAM_SIZE=1",
+    "NCCL_NET=IB",
+    "NCCL_P2P_DISABLE=1",
+    "NCCL_ROOT=/workspace/gpunetio/nccl-core-workload/build",
+    "NIXL_ENABLE_GPUNETIO_DEVICE_API=1",
+    "NIXL_LOG_LEVEL=info",
+    "NIXL_PLUGIN_DIR=/workspace/gpunetio/kernel-copy-tools/get-perf/build/src/plugins/gpunetio",
+    "NIXL_PORT=29581",
+    "NIXL_SHIM=/workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so"
+  ]
+}

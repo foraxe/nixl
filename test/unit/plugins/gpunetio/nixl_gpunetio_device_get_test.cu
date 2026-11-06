@@ -15,6 +15,8 @@
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
+#include <vector>
+#include <set>
 
 namespace {
 constexpr size_t kBytes = 8192, kScratch = 8000, kScalarDst = 64, kBatchDst = 1024;
@@ -42,7 +44,34 @@ globalTimerNs() {
 }
 
 __global__ void
-scalarGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
+inspectLane(nixlMemViewH handle, uint64_t *generation, bool poison) {
+    using namespace nixl::gpu::impl::gpunetio;
+    const auto *w = static_cast<const nixl::gpu::memViewWrapper *>(handle);
+    const auto *v = static_cast<const GpunetioDeviceView *>(w->backend_memview);
+    auto *lane = v->context->lane;
+    *generation = lane->generation;
+    generation[1] = reinterpret_cast<uintptr_t>(lane);
+    generation[2] = reinterpret_cast<uintptr_t>(lane->qp);
+    if (poison) {
+        deviceAtomic(lane->failed).store(1, cuda::memory_order_relaxed);
+        deviceAtomic(lane->phase).store(gpunetio_lane_phase_failed, cuda::memory_order_release);
+    }
+}
+
+__global__ void
+rejectMixed(nixlMemViewH local, nixlMemViewH remote, int *result) {
+    nixl::gpu::readSession session;
+    nixl::gpu::xferStatusH status{};
+    if (session.bind(local, remote) != NIXL_ERR_INVALID_PARAM ||
+        nixl::gpu::get(
+            {remote, 0, 17}, {local, 0, kScalarDst}, {local, 0, kScratch}, 256, &status) !=
+            NIXL_ERR_INVALID_PARAM) {
+        *result = 16;
+    }
+}
+
+__global__ void
+scalarGet(nixlMemViewH local, nixlMemViewH remote, uint8_t *destination, int *result) {
     if (threadIdx.x) {
         return;
     }
@@ -68,11 +97,48 @@ scalarGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
     } while (rc == NIXL_IN_PROG && globalTimerNs() < deadline);
     if (rc != NIXL_SUCCESS) {
         *result = 2;
+    } else {
+        // Consume immediately on the GPU, before a kernel boundary or CPU sync.
+        for (size_t i = 0; i < 256; ++i) {
+            if (destination[kScalarDst + i] != uint8_t(((17 + i) * 13 + 7) % 251)) {
+                *result = 14;
+                break;
+            }
+        }
     }
 }
 
+// Disposable-process fault check: corrupt only one channel's imported key.
 __global__ void
-batchGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
+corruptRemoteKey(nixlMemViewH remote) {
+    using namespace nixl::gpu::impl::gpunetio;
+    const auto *wrapper = static_cast<const nixl::gpu::memViewWrapper *>(remote);
+    const auto *view = static_cast<const GpunetioDeviceView *>(wrapper->backend_memview);
+    const_cast<GpunetioViewElem *>(view->elems)[0].key = 0;
+}
+
+__global__ void
+expectCqError(nixlMemViewH local, nixlMemViewH remote, int *result, bool sticky) {
+    nixl::gpu::xferStatusH status{};
+    auto rc =
+        nixl::gpu::get({remote, 0, 17}, {local, 0, kScalarDst}, {local, 0, kScratch}, 256, &status);
+    if (sticky) {
+        *result = rc == NIXL_ERR_BACKEND ? 0 : 19;
+        return;
+    }
+    if (rc != NIXL_IN_PROG) {
+        *result = 17;
+        return;
+    }
+    const auto deadline = globalTimerNs() + 5000000000ULL;
+    do {
+        rc = nixl::gpu::getXferStatus(status);
+    } while (rc == NIXL_IN_PROG && globalTimerNs() < deadline);
+    *result = rc == NIXL_ERR_BACKEND ? 0 : 18;
+}
+
+__global__ void
+batchGet(nixlMemViewH local, nixlMemViewH remote, uint8_t *destination, int *result) {
     __shared__ __align__(16) unsigned char storage[sizeof(nixl::gpu::readSession)];
     __shared__ uint64_t first;
     __shared__ int error;
@@ -151,6 +217,14 @@ batchGet(nixlMemViewH local, nixlMemViewH remote, int *result) {
         }
         *result = error;
     }
+    __syncthreads();
+    if (!error) {
+        for (size_t i = threadIdx.x; i < kCount * kItemBytes; i += blockDim.x) {
+            if (destination[kBatchDst + i] != uint8_t(((512 + i) * 13 + 7) % 251)) {
+                atomicExch(result, 15);
+            }
+        }
+    }
 }
 } // namespace
 
@@ -173,6 +247,11 @@ main(int argc, char **argv) {
             throw std::runtime_error("invalid source type");
         }
         const bool source_is_host = source_type == "DRAM";
+        const char *qps_env = std::getenv("NIXL_GPUNETIO_TEST_QPS");
+        const unsigned qps = qps_env ? std::stoul(qps_env) : 1;
+        if (qps < 1 || qps > 32) {
+            throw std::runtime_error("invalid test QP count");
+        }
         const nixl_mem_t source_mem = source_is_host ? DRAM_SEG : VRAM_SEG;
         check(cudaSetDevice(owner_gpu), "select owner GPU");
         uint8_t *source = nullptr, *destination = nullptr;
@@ -203,7 +282,11 @@ main(int argc, char **argv) {
         nixlAgent reader("gpunetio-get-reader-" + suffix, config);
         nixlBackendH *owner_backend = nullptr, *reader_backend = nullptr;
         auto params = [&](int value, int device) {
+            const char *relaxed = std::getenv("NIXL_GPUNETIO_TEST_RELAXED_ORDERING");
             return nixl_b_params_t{{"native_device_api", "true"},
+                                   {"native_qp_count", std::to_string(qps)},
+                                   {"native_relaxed_ordering",
+                                    relaxed && std::string(relaxed) == "1" ? "true" : "false"},
                                    {"gpu_devices", std::to_string(device)},
                                    {"network_devices", argv[1]},
                                    {"oob_interface", argv[2]},
@@ -211,6 +294,21 @@ main(int argc, char **argv) {
                                    {"oob_port", std::to_string(value)}};
         };
         auto owner_params = params(port, owner_gpu), reader_params = params(port + 1, reader_gpu);
+        const char *peer_qps = std::getenv("NIXL_GPUNETIO_TEST_PEER_QPS");
+        if (peer_qps) {
+            owner_params["native_qp_count"] = peer_qps;
+        }
+        for (const bool invalid_bool : {false, true}) {
+            auto invalid = reader_params;
+            invalid["native_relaxed_ordering"] = invalid_bool ? "invalid" : "true";
+            if (!invalid_bool) {
+                invalid["native_device_api"] = "false";
+            }
+            nixlBackendH *invalid_backend = nullptr;
+            if (reader.createBackend("GPUNETIO", invalid, invalid_backend) == NIXL_SUCCESS) {
+                throw std::runtime_error("invalid native relaxed-ordering configuration accepted");
+            }
+        }
         check(cudaSetDevice(owner_gpu), "select owner GPU");
         check(owner.createBackend("GPUNETIO", owner_params, owner_backend), "create owner backend");
         check(cudaSetDevice(reader_gpu), "select reader GPU");
@@ -233,6 +331,19 @@ main(int argc, char **argv) {
         nixl_blob_t metadata;
         check(owner.getLocalMD(metadata), "export metadata");
         std::string peer;
+        if (peer_qps) {
+            auto status = reader.loadRemoteMD(metadata, peer);
+            if (status == NIXL_SUCCESS) {
+                status = reader.makeConnection(peer, &reader_hint);
+            }
+            if (status == NIXL_SUCCESS) {
+                throw std::runtime_error("mismatched pool connected");
+            }
+            std::cout << "PASS mismatched native QP counts rejected; "
+                         "SETUP_RESOURCES_RETAINED_UNTIL_EXIT\n"
+                      << std::flush;
+            std::_Exit(0);
+        }
         // A failed section load invalidates the core's connection record.
         // Reloading the same live peer must still allow a GET.
         nixl_blob_t malformed = metadata;
@@ -246,33 +357,93 @@ main(int argc, char **argv) {
         }
         peer.clear();
         check(reader.loadRemoteMD(metadata, peer), "load metadata");
-        check(reader.makeConnection(peer, &reader_hint), "connect");
+        const auto connection = reader.makeConnection(peer, &reader_hint);
+        check(connection, "connect");
         nixl_local_dlist_t local(VRAM_SEG);
         local.addDesc(
             {reinterpret_cast<uintptr_t>(destination), kBytes, static_cast<uint64_t>(reader_gpu)});
         nixl_remote_dlist_t remote(source_mem);
         remote.addDesc(
             {reinterpret_cast<uintptr_t>(source), kBytes, static_cast<uint64_t>(owner_gpu), peer});
-        nixlMemViewH local_view = nullptr, remote_view = nullptr;
-        check(reader.prepMemView(local, local_view, &reader_hint), "prepare local view");
-        check(reader.prepMemView(remote, remote_view, &reader_hint), "prepare remote view");
-
-        scalarGet<<<1, 1>>>(local_view, remote_view, device_result);
-        check(cudaGetLastError(), "launch scalar GET");
-        check(cudaDeviceSynchronize(), "complete scalar GET");
-        int result = 0;
-        check(cudaMemcpy(&result, device_result, sizeof(result), cudaMemcpyDeviceToHost),
-              "read scalar status");
-        if (result) {
-            throw std::runtime_error("scalar GET failed: " + std::to_string(result));
+        std::vector<nixlMemViewH> locals(qps), remotes(qps);
+        for (unsigned channel = 0; channel < qps; ++channel) {
+            auto hint = reader_hint;
+            hint.customParam = "native_channel=" + std::to_string(channel);
+            check(reader.prepMemView(local, locals[channel], &hint), "prepare channel local view");
+            check(reader.prepMemView(remote, remotes[channel], &hint),
+                  "prepare channel remote view");
         }
-        batchGet<<<1, 32>>>(local_view, remote_view, device_result);
-        check(cudaGetLastError(), "launch batch GET");
-        check(cudaDeviceSynchronize(), "complete batch GET");
-        check(cudaMemcpy(&result, device_result, sizeof(result), cudaMemcpyDeviceToHost),
-              "read batch status");
-        if (result) {
-            throw std::runtime_error("batch GET failed: " + std::to_string(result));
+        auto invalid_hint = reader_hint;
+        invalid_hint.customParam = "native_channel=" + std::to_string(qps);
+        nixlMemViewH invalid_view = nullptr;
+        if (reader.prepMemView(local, invalid_view, &invalid_hint) != NIXL_ERR_INVALID_PARAM ||
+            invalid_view) {
+            throw std::runtime_error("out-of-range channel accepted");
+        }
+        if (qps > 1) {
+            rejectMixed<<<1, 1>>>(locals[0], remotes[1], device_result);
+            check(cudaDeviceSynchronize(), "mixed-channel rejection");
+            int error = 0;
+            check(cudaMemcpy(&error, device_result, sizeof(error), cudaMemcpyDeviceToHost),
+                  "mixed result");
+            if (error) {
+                throw std::runtime_error("mixed channels accepted");
+            }
+        }
+        uint64_t *device_generation = nullptr;
+        check(cudaMalloc(&device_generation, 3 * sizeof(uint64_t)), "generation buffer");
+        std::set<uint64_t> lane_addresses, qp_addresses;
+        for (unsigned channel = 0; channel < qps; ++channel) {
+            auto local_view = locals[channel], remote_view = remotes[channel];
+            inspectLane<<<1, 1>>>(local_view, device_generation, false);
+            check(cudaDeviceSynchronize(), "channel identities");
+            uint64_t identity[3];
+            check(cudaMemcpy(identity, device_generation, sizeof(identity), cudaMemcpyDeviceToHost),
+                  "copy identities");
+            if (!identity[1] || !identity[2] || !lane_addresses.insert(identity[1]).second ||
+                !qp_addresses.insert(identity[2]).second) {
+                throw std::runtime_error("pool channels alias the same lane or QP");
+            }
+            scalarGet<<<1, 1>>>(local_view, remote_view, destination, device_result);
+            check(cudaGetLastError(), "launch scalar GET");
+            check(cudaDeviceSynchronize(), "complete scalar GET");
+            int result = 0;
+            check(cudaMemcpy(&result, device_result, sizeof(result), cudaMemcpyDeviceToHost),
+                  "read scalar status");
+            if (result) {
+                throw std::runtime_error("scalar GET failed: " + std::to_string(result));
+            }
+            // Cross the 2048-entry SQ/CQ wrap and repeatedly consume before kernel exit.
+            for (unsigned round = 0; round < 130; ++round) {
+                check(cudaMemset(destination + kBatchDst, 0xa5, kCount * kItemBytes),
+                      "poison batch destination");
+                batchGet<<<1, 32>>>(local_view, remote_view, destination, device_result);
+                check(cudaGetLastError(), "launch batch GET");
+                check(cudaDeviceSynchronize(), "complete batch GET");
+                check(cudaMemcpy(&result, device_result, sizeof(result), cudaMemcpyDeviceToHost),
+                      "read batch status");
+                if (result) {
+                    throw std::runtime_error("batch GET failed: " + std::to_string(result));
+                }
+            }
+            uint64_t before = 0, after = 0;
+            inspectLane<<<1, 1>>>(local_view, device_generation, false);
+            check(cudaDeviceSynchronize(), "read generation before");
+            check(cudaMemcpy(&before, device_generation, sizeof(before), cudaMemcpyDeviceToHost),
+                  "copy generation before");
+            check(reader.loadRemoteMD(metadata, peer), "same-live metadata reload after use");
+            auto hint = reader_hint;
+            hint.customParam = "native_channel=" + std::to_string(channel);
+            nixlMemViewH repeated = nullptr;
+            check(reader.prepMemView(remote, repeated, &hint), "reprepare used channel");
+            inspectLane<<<1, 1>>>(local_view, device_generation, false);
+            check(cudaDeviceSynchronize(), "read generation after");
+            check(cudaMemcpy(&after, device_generation, sizeof(after), cudaMemcpyDeviceToHost),
+                  "copy generation after");
+            if (!before || before != after) {
+                throw std::runtime_error("channel generation reset during preparation");
+            }
+            reader.releaseMemView(repeated);
         }
         uint8_t received[kBytes];
         check(cudaMemcpy(received, destination, kBytes, cudaMemcpyDeviceToHost),
@@ -289,8 +460,68 @@ main(int argc, char **argv) {
                 throw std::runtime_error("data/guard mismatch at " + std::to_string(i));
             }
         }
-        reader.releaseMemView(remote_view);
-        reader.releaseMemView(local_view);
+        if (std::getenv("NIXL_GPUNETIO_TEST_RETENTION")) {
+            if (qps < 2) {
+                throw std::runtime_error("retention test needs multiple channels");
+            }
+            const auto failed = locals.back();
+            uint64_t before = 0, after = 0;
+            const bool real_error = std::getenv("NIXL_GPUNETIO_TEST_CQ_ERROR") != nullptr;
+            if (real_error) {
+                corruptRemoteKey<<<1, 1>>>(remotes.back());
+                expectCqError<<<1, 1>>>(failed, remotes.back(), device_result, false);
+                check(cudaDeviceSynchronize(), "real CQ failure");
+                int error = 0;
+                check(cudaMemcpy(&error, device_result, sizeof(error), cudaMemcpyDeviceToHost),
+                      "CQ failure result");
+                if (error) {
+                    throw std::runtime_error("CQ error not detected");
+                }
+                expectCqError<<<1, 1>>>(failed, remotes.back(), device_result, true);
+                check(cudaDeviceSynchronize(), "sticky CQ failure");
+                check(cudaMemcpy(&error, device_result, sizeof(error), cudaMemcpyDeviceToHost),
+                      "sticky result");
+                if (error) {
+                    throw std::runtime_error("failed channel reused");
+                }
+                scalarGet<<<1, 1>>>(locals[0], remotes[0], destination, device_result);
+                check(cudaDeviceSynchronize(), "healthy channel after peer channel error");
+                check(cudaMemcpy(&error, device_result, sizeof(error), cudaMemcpyDeviceToHost),
+                      "healthy result");
+                if (error) {
+                    throw std::runtime_error("failure leaked to independent channel");
+                }
+            }
+            inspectLane<<<1, 1>>>(failed, device_generation, !real_error);
+            check(cudaDeviceSynchronize(), "poison idle last channel");
+            check(cudaMemcpy(&before, device_generation, sizeof(before), cudaMemcpyDeviceToHost),
+                  "poison generation");
+            reader.releaseMemView(remotes[0]);
+            reader.releaseMemView(locals[0]);
+            reader.releaseMemView(remotes.back());
+            reader.releaseMemView(failed);
+            inspectLane<<<1, 1>>>(failed, device_generation, false);
+            check(cudaDeviceSynchronize(), "retained channel memory");
+            check(cudaMemcpy(&after, device_generation, sizeof(after), cudaMemcpyDeviceToHost),
+                  "retained generation");
+            if (before != after) {
+                throw std::runtime_error("failed channel view was not retained");
+            }
+            if (real_error) {
+                std::cout << "PASS real CQ error, sticky refusal, independent healthy channel\n";
+            }
+            std::cout << "PASS pool idle release and failed-channel retention; "
+                         "QUARANTINED_UNTIL_PROCESS_EXIT\n"
+                      << std::flush;
+            std::_Exit(0);
+        }
+        for (auto view : remotes) {
+            reader.releaseMemView(view);
+        }
+        for (auto view : locals) {
+            reader.releaseMemView(view);
+        }
+        check(cudaFree(device_generation), "free generation buffer");
         check(reader.deregisterMem(reader_reg, &reader_hint), "deregister destination");
         check(cudaFree(device_result), "free status");
         check(cudaFree(destination), "free destination");
@@ -301,7 +532,7 @@ main(int argc, char **argv) {
         } else {
             check(cudaFree(source), "free source");
         }
-        std::cout << "PASS " << source_type
+        std::cout << "PASS " << source_type << " qps=" << qps
                   << " scalar and CTA batch GET; data, guards and completion validated\n";
         return 0;
     }

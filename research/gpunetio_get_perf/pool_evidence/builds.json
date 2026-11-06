@@ -1,0 +1,29 @@
+{
+  "core_commit": "93f9df14ee4a1d5599986ee2b51351655e9e595d",
+  "base_commit": "fbe8ccd339d656bef0b1a4d2397d4a8ef97bc93a",
+  "get_branch_base": "bdf954038aa76cec4b63d2fb556debc0a62ea696",
+  "core_sources": {
+    "src/plugins/gpunetio/gpunetio_backend.cpp": "b9be36ec9d71ffd9ae8fe333f12883063c0f004aee4b18bd1d32b0cf6e43dd08",
+    "src/plugins/gpunetio/gpunetio_device_memview.cpp": "4cc0c6a3f8f5b5ae6639e7330a53b68819059910faa531e10b49e9b69e9dd4bc",
+    "src/plugins/gpunetio/gpunetio_device_memview.h": "56730b4788ce4034d7dfbaf2515556d9f176af62c73484db5f4f35961f766deb",
+    "src/plugins/gpunetio/gpunetio_native_options.h": "509a401c6088b5b9c604fac6ebfabbc3e51c23d448d271e0b78271220f28d2e5",
+    "src/plugins/gpunetio/gpunetio_backend.h": "f89d70d999c763c39a41b79f383fbf24b47bf4e87cc268b3525b035f20a9fa2e",
+    "src/plugins/gpunetio/gpunetio_plugin.cpp": "9cfa0cadbef28ebf92d88effa43676892f040e1e903bb0aedd853827ac2b735b"
+  },
+  "binaries": {
+    "adapter_pool_final.so": "e786ad9cf1a9d595946e65927267b4705970d9b5d0d0a396600467d2cdff0fe3",
+    "bench_p1": "2fbcb3cb4f05edc7a2da413dfc45df504edbd9979f53ab2e9233b1c1d3884530",
+    "bench_p32": "7e5cbac1be81c0ddcc2334ece49c1daf3232444787e5c176b29521017d00c660",
+    "bench_i32": "55b865d32823ce1877263253fb64feb74e8f17576586fdcf192839c28b4b528e",
+    "device_get_test_fault": "cd6094b435fe0e2e10672f035e2637c1ca32e8904f3eb1ef87538e62ad50f931",
+    "native_options_test_release": "ab35e24f4a82c853a684ef9a2e2203b6f599c9926d81e44765ce819cb90b97c9"
+  },
+  "plugin_sha256": "a130415c8ef5678a7b3779803a774279ec7bae3bfba6870f175f6951f6bec3c2",
+  "nccl_commit": "3e46c089f4ae4732722a419eb6096aead7e47a30",
+  "nccl_version": "2.32.3",
+  "nccl_gpunetio": "4.1.0",
+  "nixl_doca": "3.5.0098",
+  "cuda": "13.1, sm100",
+  "hardware": "GB200 GPUs0/1, NUMA0, mlx5_0/GID3 same-NIC loopback; reported400Gb/s",
+  "scope": "component consumer pipeline; no model/cross-host/physical-limit claim"
+}

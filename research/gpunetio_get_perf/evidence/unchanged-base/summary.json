@@ -1,0 +1,106 @@
+{
+  "status": "PASS",
+  "validation": [
+    {
+      "pair": 1,
+      "rank": 0,
+      "hash_records": [
+        "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/gin_nixl_bench.cu",
+        "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  /workspace/gpunetio/kernel-copy-tools/get-perf/gin_nixl_bench_gate",
+        "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  /workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+        "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  /workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+        "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/engram_native_nixl35.cu",
+        "d1dfbb75ccb254c6337cb990abc6e9f0ed65a15e9be31031fa7a7c232687452a  /workspace/gpunetio/kernel-copy-tools/gdaki-compare/install/lib/aarch64-linux-gnu/plugins/libplugin_GPUNETIO.so"
+      ],
+      "raw_stdout_sha256": "7c54c8cf79efe54566fff2e90f8707b3094cf0fce5df89f4bf241ecaec1275bb"
+    },
+    {
+      "pair": 1,
+      "rank": 1,
+      "hash_records": [
+        "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/gin_nixl_bench.cu",
+        "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  /workspace/gpunetio/kernel-copy-tools/get-perf/gin_nixl_bench_gate",
+        "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  /workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+        "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  /workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+        "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/engram_native_nixl35.cu",
+        "d1dfbb75ccb254c6337cb990abc6e9f0ed65a15e9be31031fa7a7c232687452a  /workspace/gpunetio/kernel-copy-tools/gdaki-compare/install/lib/aarch64-linux-gnu/plugins/libplugin_GPUNETIO.so"
+      ],
+      "raw_stdout_sha256": "060814dd5761e5f3f805fc5b41bbe13847e3ef7998de42443304bc7ffb72b622"
+    },
+    {
+      "pair": 2,
+      "rank": 0,
+      "hash_records": [
+        "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/gin_nixl_bench.cu",
+        "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  /workspace/gpunetio/kernel-copy-tools/get-perf/gin_nixl_bench_gate",
+        "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  /workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+        "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  /workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+        "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/engram_native_nixl35.cu",
+        "d1dfbb75ccb254c6337cb990abc6e9f0ed65a15e9be31031fa7a7c232687452a  /workspace/gpunetio/kernel-copy-tools/gdaki-compare/install/lib/aarch64-linux-gnu/plugins/libplugin_GPUNETIO.so"
+      ],
+      "raw_stdout_sha256": "e8abbf934aab2af03ae5f0172a64ba5a3e4fad45c1b1b4ebbe332d214c84d6ab"
+    },
+    {
+      "pair": 2,
+      "rank": 1,
+      "hash_records": [
+        "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/gin_nixl_bench.cu",
+        "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  /workspace/gpunetio/kernel-copy-tools/get-perf/gin_nixl_bench_gate",
+        "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  /workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+        "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  /workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+        "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/engram_native_nixl35.cu",
+        "d1dfbb75ccb254c6337cb990abc6e9f0ed65a15e9be31031fa7a7c232687452a  /workspace/gpunetio/kernel-copy-tools/gdaki-compare/install/lib/aarch64-linux-gnu/plugins/libplugin_GPUNETIO.so"
+      ],
+      "raw_stdout_sha256": "0ed39491f50a0d18b254e34452261ac89b626fb4284aef3fa353ea2777aded38"
+    },
+    {
+      "pair": 3,
+      "rank": 0,
+      "hash_records": [
+        "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/gin_nixl_bench.cu",
+        "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  /workspace/gpunetio/kernel-copy-tools/get-perf/gin_nixl_bench_gate",
+        "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  /workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+        "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  /workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+        "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/engram_native_nixl35.cu",
+        "d1dfbb75ccb254c6337cb990abc6e9f0ed65a15e9be31031fa7a7c232687452a  /workspace/gpunetio/kernel-copy-tools/gdaki-compare/install/lib/aarch64-linux-gnu/plugins/libplugin_GPUNETIO.so"
+      ],
+      "raw_stdout_sha256": "47182ed807ebf01a0397f8fcb915e8eb48abb6fd651b4d2f349adfb290bb03cf"
+    },
+    {
+      "pair": 3,
+      "rank": 1,
+      "hash_records": [
+        "1365a5ff003bc7e1700540dc8fc43a10d14e64c029275827fac069fbac2c9de9  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/gin_nixl_bench.cu",
+        "ace4fd1415213c1783750ce4eff04aa972df895a8c23e848ea181168fb0ca23a  /workspace/gpunetio/kernel-copy-tools/get-perf/gin_nixl_bench_gate",
+        "1a407a8878386ff747036d3316b995d207b2fd044e7405e8c53ea3a6addb5eff  /workspace/gpunetio/kernel-copy-tools/get-perf/adapter_gate.so",
+        "73085c96e9be56e9361889b38745f26313a07e67709211204f3f899114a07320  /workspace/gpunetio/nccl-core-workload/build/lib/libnccl.so.2",
+        "1983346fe893f43e203b3d327dee3658e4c2a6c161dcd9120497718ab86d2b17  /workspace/gpunetio/nixl-get-perf/research/gpunetio_get_perf/engram_native_nixl35.cu",
+        "d1dfbb75ccb254c6337cb990abc6e9f0ed65a15e9be31031fa7a7c232687452a  /workspace/gpunetio/kernel-copy-tools/gdaki-compare/install/lib/aarch64-linux-gnu/plugins/libplugin_GPUNETIO.so"
+      ],
+      "raw_stdout_sha256": "186f8875b20c4a2d4965b99174e8d8432ac4f0a2093338aa760e8b1e604022be"
+    }
+  ],
+  "measured_pipelines": 2400,
+  "matrix": {
+    "384": {
+      "eager": {
+        "gin": 595.2355,
+        "nixl": 784.2445
+      },
+      "graph": {
+        "gin": 592.9,
+        "nixl": 784.74
+      }
+    },
+    "4096": {
+      "eager": {
+        "gin": 6864.645,
+        "nixl": 6614.8845
+      },
+      "graph": {
+        "gin": 6863.462,
+        "nixl": 6589.8279999999995
+      }
+    }
+  }
+}

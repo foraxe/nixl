@@ -15,6 +15,16 @@
 
 compile_flags = []
 
+registration_access_test = executable('nixl_gpunetio_registration_access_test',
+    'registration_access_test.cpp',
+    dependencies: dependency('libibverbs', include_type: 'system'),
+    include_directories: include_directories('../../../../src/plugins/gpunetio'))
+test('nixl_gpunetio_registration_access_test', registration_access_test)
+native_pool_options_test = executable('nixl_gpunetio_native_pool_options_test',
+    'native_pool_options_test.cpp',
+    include_directories: include_directories('../../../../src/plugins/gpunetio'))
+test('nixl_gpunetio_native_pool_options_test', native_pool_options_test)
+
 if cuda_dep.found()
         cuda_dependencies = [cuda_dep]
         compile_flags += '-DHAVE_CUDA'

@@ -158,13 +158,15 @@ public:
 
 private:
     bool nativeMode_ = false;
+    bool nativeRelaxedOrdering_ = false;
     mutable std::unique_ptr<nixlGpunetioNativeState> nativeState_;
     void
     initializeNativeState();
     nixl_status_t
     prepareNativeView(const nixl_meta_dlist_t *,
                       const nixl_remote_meta_dlist_t *,
-                      nixlMemViewH &) const;
+                      nixlMemViewH &,
+                      const nixl_opt_b_args_t *) const;
     struct doca_log_backend *sdk_log;
     std::string msg_tag_start = "DOCAS";
     std::string msg_tag_end = "DOCAE";

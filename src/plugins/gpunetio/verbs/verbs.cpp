@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "verbs.h"
+#include "registration_access.h"
 #include "gpunetio_backend_aux.h"
 
 #define VERBS_TEST_MAX_SEND_SEGS (2)
@@ -628,7 +629,8 @@ mr::mr(doca_gpu *gpu_dev_,
        uint32_t elem_num_,
        size_t elem_size_,
        struct ibv_pd *pd_,
-       bool use_dmabuf)
+       bool use_dmabuf,
+       bool relaxed_ordering)
     : gpu_dev(gpu_dev_),
       addr(addr_),
       elem_num(elem_num_),
@@ -665,13 +667,18 @@ mr::mr(doca_gpu *gpu_dev_,
                                     aligned_end - aligned_start,
                                     &dmabuf_fd);
         if (status == DOCA_SUCCESS) {
-            ibmr = ibv_reg_dmabuf_mr(pd,
-                                     start - aligned_start,
-                                     tot_size,
-                                     (uint64_t)addr,
-                                     dmabuf_fd,
-                                     IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
-                                         IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_ATOMIC);
+            const auto registration = registerMrWithOrdering(
+                [&](int access) {
+                    return ibv_reg_dmabuf_mr(pd,
+                                             start - aligned_start,
+                                             tot_size,
+                                             (uint64_t)addr,
+                                             dmabuf_fd,
+                                             access);
+                },
+                relaxed_ordering);
+            ibmr = registration.mr;
+            relaxed_ordering_ = registration.relaxed;
             if (ibmr == nullptr) {
                 close(dmabuf_fd);
                 dmabuf_fd = -1;
@@ -686,11 +693,11 @@ mr::mr(doca_gpu *gpu_dev_,
      * Fallback mechanism using legacy mode with nvidia-peermem module and ibv_reg_mr.
      */
     if (ibmr == nullptr) {
-        ibmr = ibv_reg_mr(pd,
-                          addr,
-                          tot_size,
-                          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE |
-                              IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_ATOMIC);
+        const auto registration = registerMrWithOrdering(
+            [&](int access) { return ibv_reg_mr(pd, addr, tot_size, access); },
+            relaxed_ordering);
+        ibmr = registration.mr;
+        relaxed_ordering_ = registration.relaxed;
         if (ibmr == nullptr) {
             throw std::invalid_argument("Failed to create mr");
         }
