@@ -1,0 +1,19 @@
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_b02aaaf0b0d64c::t_4f6c60a8b83690 1615-1619
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9d1b4557349c7100da106a966cd91e8b676fb72a",
+  "prompts": {},
+  "sessions": {
+    "s_b02aaaf0b0d64c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a187d1-dc48-7243-b1c5-e64b7d932a1a",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
