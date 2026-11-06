@@ -974,7 +974,13 @@ nixlDocaEngine::getGpuCudaId() {
 nixl_status_t
 nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
     doca_error_t result;
-    std::lock_guard<std::mutex> lock(qpLock);
+    std::shared_ptr<std::mutex> create_mutex;
+    std::unique_lock<std::mutex> create_lock;
+    if (nativeMode_) {
+        create_mutex = researchQpCreateMutex(remote_agent);
+        create_lock = std::unique_lock<std::mutex>(*create_mutex);
+    }
+    std::unique_lock<std::mutex> lock(qpLock);
 
     NIXL_DEBUG << "addRdmaQp for " << remote_agent << std::endl;
 
@@ -984,6 +990,9 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
     }
     if (retainedQp_ != nullptr || qpRollbackFailed_) {
         return NIXL_ERR_BACKEND;
+    }
+    if (nativeMode_) {
+        lock.unlock();
     }
 
     NIXL_DEBUG << "DOCA addRdmaQp for remote " << remote_agent << std::endl;
@@ -996,11 +1005,28 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
     }
 
     auto rdma_qp = std::make_unique<nixlDocaRdmaQp>();
+    auto retain = [&](bool untracked_failure) {
+        if (!lock.owns_lock()) {
+            lock.lock();
+        }
+        qpRollbackFailed_ = qpRollbackFailed_ || untracked_failure;
+        if (!retainedQp_) {
+            retainedQp_ = std::move(rdma_qp);
+        } else {
+            // Multiple failing concurrent creations: preserve all dependencies
+            // until process exit instead of overwriting the first failure.
+            qpRollbackFailed_ = true;
+            rdma_qp.release();
+        }
+        if (nativeMode_) {
+            lock.unlock();
+        }
+    };
     auto close_or_retain = [&]() {
         const bool data_closed = rdma_qp->closeDataQps();
         const bool notif_closed = rdma_qp->qp_notif == nullptr || rdma_qp->qp_notif->close();
         if (!data_closed || !notif_closed) {
-            retainedQp_ = std::move(rdma_qp);
+            retain(false);
         }
     };
     try {
@@ -1044,14 +1070,13 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
     }
     catch (const nixl::doca::verbs::teardown_error &e) {
         NIXL_ERROR << e.what();
-        qpRollbackFailed_ = true;
-        retainedQp_ = std::move(rdma_qp);
+        retain(true);
         return NIXL_ERR_BACKEND;
     }
     catch (const std::exception &e) {
         NIXL_ERROR << e.what();
         if (!rdma_qp->closeDataQps()) {
-            retainedQp_ = std::move(rdma_qp);
+            retain(false);
         }
         return NIXL_ERR_BACKEND;
     }
@@ -1071,8 +1096,7 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
     }
     catch (const nixl::doca::verbs::teardown_error &e) {
         NIXL_ERROR << e.what();
-        qpRollbackFailed_ = true;
-        retainedQp_ = std::move(rdma_qp);
+        retain(true);
         return NIXL_ERR_BACKEND;
     }
     catch (const std::exception &e) {
@@ -1120,6 +1144,9 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
         return NIXL_ERR_BACKEND;
     }
 
+    if (!lock.owns_lock()) {
+        lock.lock();
+    }
     [[maybe_unused]] const bool inserted = qpMap.emplace(remote_agent, rdma_qp.get()).second;
     assert(inserted);
     rdma_qp.release();
@@ -1533,6 +1560,26 @@ nixlDocaEngine::connect(const std::string &remote_agent) {
     return NIXL_SUCCESS;
 }
 
+std::shared_ptr<std::mutex>
+nixlDocaEngine::researchQpCreateMutex(const std::string &remote_agent) {
+    std::lock_guard<std::mutex> lock(researchPeerSetupLock);
+    auto &create_mutex = researchQpCreateLocks[remote_agent];
+    if (!create_mutex) {
+        create_mutex = std::make_shared<std::mutex>();
+    }
+    return create_mutex;
+}
+
+std::shared_ptr<std::mutex>
+nixlDocaEngine::researchPeerMutex(const std::string &remote_agent) {
+    std::lock_guard<std::mutex> lock(researchPeerSetupLock);
+    auto &peer_mutex = researchPeerLocks[remote_agent];
+    if (!peer_mutex) {
+        peer_mutex = std::make_shared<std::mutex>();
+    }
+    return peer_mutex;
+}
+
 nixl_status_t
 nixlDocaEngine::retireIdlePeer(const std::string &remote_agent) {
     // Caller must have stopped the reader and drained all GPU/NIC work.
@@ -1543,24 +1590,28 @@ nixlDocaEngine::retireIdlePeer(const std::string &remote_agent) {
     if (guard.status() != cudaSuccess) {
         return NIXL_ERR_BACKEND;
     }
-    std::lock_guard<std::mutex> setup_lock(researchPeerSetupLock);
-    if (researchOutboundInFlight.count(remote_agent)) {
-        return NIXL_IN_PROG;
-    }
-    {
-        std::lock_guard<std::mutex> remote_lock(remoteConnLock);
-        // This prototype handles listener-created owner peers only.
-        if (remoteConnMap.count(remote_agent)) {
-            return NIXL_ERR_NOT_SUPPORTED;
-        }
-    }
+    auto peer_mutex = researchPeerMutex(remote_agent);
+    std::lock_guard<std::mutex> peer_lock(*peer_mutex);
     // prepMemView takes the native-state lock before qpLock.
     std::lock_guard<std::mutex> state_lock(nativeState_->mutex);
-    if (nativeState_->peer == remote_agent && nativeState_->remoteViews != 0) {
-        return NIXL_ERR_NOT_SUPPORTED;
+    {
+        std::lock_guard<std::mutex> setup_lock(researchPeerSetupLock);
+        if (researchOutboundInFlight.count(remote_agent)) {
+            return NIXL_IN_PROG;
+        }
+        {
+            std::lock_guard<std::mutex> remote_lock(remoteConnLock);
+            // This prototype handles listener-created owner peers only.
+            if (remoteConnMap.count(remote_agent)) {
+                return NIXL_ERR_NOT_SUPPORTED;
+            }
+        }
+        if (nativeState_->peer == remote_agent && nativeState_->remoteViews != 0) {
+            return NIXL_ERR_NOT_SUPPORTED;
+        }
+        researchRetiredPeers.insert(remote_agent);
     }
     std::scoped_lock lock(connectLock, qpLock);
-    researchRetiredPeers.insert(remote_agent);
     auto it = qpMap.find(remote_agent);
     if (it == qpMap.end()) {
         return NIXL_SUCCESS;

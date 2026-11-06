@@ -34,6 +34,8 @@ public:
     std::mutex researchPeerSetupLock;
     std::unordered_set<std::string> researchRetiredPeers;
     std::unordered_map<std::string, size_t> researchOutboundInFlight;
+    std::unordered_map<std::string, std::shared_ptr<std::mutex>> researchPeerLocks;
+    std::unordered_map<std::string, std::shared_ptr<std::mutex>> researchQpCreateLocks;
     mutable std::mutex remoteConnLock;
     std::vector<std::pair<uint32_t, doca_gpu *>> gdevs; /* List of DOCA GPUNetIO device handlers */
     doca_dev *ddev = nullptr; /* DOCA device handler associated to queues */
@@ -53,6 +55,10 @@ public:
     addRdmaQp(const std::string &remote_agent);
     nixl_status_t
     retireIdlePeer(const std::string &remote_agent);
+    std::shared_ptr<std::mutex>
+    researchPeerMutex(const std::string &remote_agent);
+    std::shared_ptr<std::mutex>
+    researchQpCreateMutex(const std::string &remote_agent);
     nixl_status_t
     connectServerRdmaQp(int oob_sock_client, const std::string &remote_agent);
     nixl_status_t

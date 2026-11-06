@@ -406,8 +406,123 @@ destroy_verbs_qp_attr:
     return status;
 }
 
+namespace {
+struct ResearchOobWorker {
+    std::mutex socketMutex;
+    int socket = -1;
+    std::atomic<bool> done{false};
+    std::thread thread;
+};
+
+void *
+researchConcurrentProgress(nixlDocaEngine *eng) {
+    constexpr size_t maxWorkers = 32;
+    std::vector<std::shared_ptr<ResearchOobWorker>> workers;
+    while (ACCESS_ONCE(*eng->pthrStop) == 0) {
+        for (auto it = workers.begin(); it != workers.end();) {
+            if ((*it)->done.load()) {
+                (*it)->thread.join();
+                it = workers.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        if (workers.size() >= maxWorkers) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            continue;
+        }
+        sockaddr_in client{};
+        socklen_t length = sizeof(client);
+        const int fd = accept(eng->oob_sock_server, reinterpret_cast<sockaddr *>(&client), &length);
+        if (fd < 0) {
+            if (ACCESS_ONCE(*eng->pthrStop) != 0) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+        std::shared_ptr<ResearchOobWorker> worker;
+        bool queued = false;
+        try {
+            worker = std::make_shared<ResearchOobWorker>();
+            worker->socket = fd;
+            workers.push_back(worker);
+            queued = true;
+            worker->thread = std::thread([eng, worker] {
+                const int socket = worker->socket;
+                std::string peer;
+                nixl_status_t status = NIXL_ERR_BACKEND;
+                try {
+                    if (setOobSocketTimeouts(socket) == 0) {
+                        status = eng->recvRemoteAgentName(socket, peer);
+                    }
+                    if (status == NIXL_SUCCESS) {
+                        auto peer_mutex = eng->researchPeerMutex(peer);
+                        std::lock_guard<std::mutex> peer_lock(*peer_mutex);
+                        {
+                            std::lock_guard<std::mutex> state_lock(eng->researchPeerSetupLock);
+                            if (eng->researchRetiredPeers.count(peer)) {
+                                status = NIXL_ERR_NOT_SUPPORTED;
+                            }
+                        }
+                        if (status == NIXL_SUCCESS) {
+                            status = eng->addRdmaQp(peer);
+                        }
+                        if (status == NIXL_IN_PROG) {
+                            status = NIXL_SUCCESS;
+                        }
+                        if (status == NIXL_SUCCESS) {
+                            status = eng->nixlDocaInitNotif(peer, eng->ddev, eng->gdevs[0].second);
+                        }
+                        if (status == NIXL_SUCCESS) {
+                            status = eng->connectServerRdmaQp(socket, peer);
+                        }
+                    }
+                    if (status != NIXL_SUCCESS) {
+                        NIXL_ERROR << "Failed to set up GPUNETIO connection";
+                    }
+                }
+                catch (const std::exception &e) {
+                    NIXL_ERROR << "GPUNETIO connection worker failed: " << e.what();
+                }
+                catch (...) {
+                    NIXL_ERROR << "GPUNETIO connection worker failed";
+                }
+                {
+                    std::lock_guard<std::mutex> lock(worker->socketMutex);
+                    close(worker->socket);
+                    worker->socket = -1;
+                }
+                worker->done.store(true);
+            });
+        }
+        catch (const std::exception &e) {
+            NIXL_ERROR << "Failed to create GPUNETIO connection worker: " << e.what();
+            if (queued) {
+                workers.pop_back();
+            }
+            close(fd);
+        }
+    }
+    for (const auto &worker : workers) {
+        std::lock_guard<std::mutex> lock(worker->socketMutex);
+        if (worker->socket >= 0) {
+            shutdown(worker->socket, SHUT_RDWR);
+        }
+    }
+    for (const auto &worker : workers) {
+        worker->thread.join();
+    }
+    return nullptr;
+}
+} // namespace
+
 void *
 threadProgressFunc(void *arg) {
+    auto *engine = static_cast<nixlDocaEngine *>(arg);
+    if (!engine->supportsNotif()) {
+        return researchConcurrentProgress(engine);
+    }
     using namespace nixlTime;
     struct sockaddr_in client_addr = {0};
     unsigned int client_size = 0;
@@ -452,9 +567,15 @@ threadProgressFunc(void *arg) {
 
         remote_agent.clear();
         nixl_status_t status = eng->recvRemoteAgentName(oob_sock_client, remote_agent);
-        std::lock_guard<std::mutex> peer_setup(eng->researchPeerSetupLock);
-        if (status == NIXL_SUCCESS && eng->researchRetiredPeers.count(remote_agent)) {
-            status = NIXL_ERR_NOT_SUPPORTED;
+        std::shared_ptr<std::mutex> peer_mutex;
+        std::unique_lock<std::mutex> peer_setup;
+        if (status == NIXL_SUCCESS) {
+            peer_mutex = eng->researchPeerMutex(remote_agent);
+            peer_setup = std::unique_lock<std::mutex>(*peer_mutex);
+            std::lock_guard<std::mutex> state_lock(eng->researchPeerSetupLock);
+            if (eng->researchRetiredPeers.count(remote_agent)) {
+                status = NIXL_ERR_NOT_SUPPORTED;
+            }
         }
         if (status == NIXL_SUCCESS) {
             status = eng->addRdmaQp(remote_agent);
