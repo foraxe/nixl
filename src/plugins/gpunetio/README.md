@@ -60,9 +60,40 @@ DOCA GPUNetIO backend takes these input parameters:
 Build with `-Dgpunetio_device_api=enabled` and create a GPUNETIO backend with
 `native_device_api=true`. This mode supports GPU-initiated GET using local VRAM
 and registered remote VRAM or pinned Host memory. It does not support host
-transfer requests or notifications. Each engine has one data QP; applications
-can use independent engines for multiple QPs. The default backend remains in
-stream mode.
+transfer requests or notifications. `native_qp_count=1` keeps the existing
+single-QP default. Native mode can opt into a backend-owned pool of up to32
+active READ QPs with `native_qp_count=N` on both peers. One agent/backend and
+one memory registration serve the entire pool. Legacy stream-mode WRITE uses
+the separate `data_qp_count` option and remains limited to4. The default
+backend remains in stream mode.
+
+Prepare channel views once with `nixl_opt_args_t::customParam` set to
+`"native_channel=N"` in `prepMemView`; omitted/empty selects channel0. Valid
+indices are `[0,native_qp_count)`. Use matching local/remote/scratch channels.
+Existing GPU `get`, status, and `readSession` calls and the device-view ABI
+are unchanged. Views are long-lived prepared resources, not per-copy requests;
+the backend owns the QPs and shares their registered buffers. For example:
+
+```cpp
+auto lane_hint = hint;
+lane_hint.customParam = "native_channel=3";
+agent.prepMemView(local, local_view, &lane_hint);
+agent.prepMemView(remote, remote_view, &lane_hint);
+// GPU: same get/readSession calls using this prepared view pair.
+```
+
+Each pool channel has independent ownership, generations, SQ/CQ and ordering.
+There is no cross-channel ordering even when relaxed ordering is disabled;
+do not overlap in-flight destination ranges across channels without external
+synchronization. The native pool remains one peer per engine. Re-preparing a
+bound channel does not reset its generation or credits. Busy/failed channel
+views retain their MR pins until safe teardown. Both peers must configure the
+same native pool size; a mismatched pool is rejected, not silently resized.
+
+The pool reuses the versioned multi-QP connection exchange. For pools larger
+than one, the legacy dedicated QP is retained for wire compatibility; the
+additional data-QP set supplies the active native channels. Native setup does
+not allocate the legacy CPU-mapped striped-WRITE completion counter.
 
 Native GET users may opt in to `native_relaxed_ordering=true` (default false)
 to request PCIe relaxed ordering for registered VRAM data buffers. This option

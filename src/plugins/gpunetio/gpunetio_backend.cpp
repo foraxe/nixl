@@ -16,6 +16,7 @@
  */
 
 #include "gpunetio_backend.h"
+#include "gpunetio_native_options.h"
 #include "gpunetio_cuda_device_guard.h"
 #include "gpunetio_completion_status.h"
 #include "serdes/serdes.h"
@@ -365,16 +366,22 @@ nixlDocaEngine::nixlDocaEngine(const nixlBackendInitParams *init_params)
     NIXL_INFO << "CUDA streams used for pool mode: " << nstreams;
 
     local_port = parseGpunetioOobPort((*custom_params)["oob_port"]);
-    dataQpCount_ = parseDataQpCount((*custom_params)["data_qp_count"]);
-    if (nativeMode_ && dataQpCount_ != 1) {
-        throw std::invalid_argument("native_device_api requires data_qp_count=1");
+    const auto write_qps = parseDataQpCount((*custom_params)["data_qp_count"]);
+    const auto native_qps = nixl::gpunetio::parseNativeQps((*custom_params)["native_qp_count"]);
+    if (!nativeMode_ && native_qps != 1) {
+        throw std::invalid_argument("native_qp_count requires native_device_api");
     }
-    if (dataQpCount_ > 1 &&
+    if (nativeMode_ && write_qps != 1) {
+        throw std::invalid_argument("native mode uses native_qp_count, not data_qp_count");
+    }
+    dataQpCount_ = nativeMode_ ? native_qps : write_qps;
+    if (!nativeMode_ && dataQpCount_ > 1 &&
         (nstreams < static_cast<int>(dataQpCount_) ||
          nstreams > static_cast<int>(DOCA_POST_STREAM_NUM))) {
         throw std::invalid_argument("striped WRITE requires data_qp_count <= cuda_streams <= 4");
     }
-    NIXL_INFO << "WRITE data QPs per peer: " << dataQpCount_;
+    NIXL_INFO << (nativeMode_ ? "Native READ pool QPs per peer: " : "WRITE data QPs per peer: ")
+              << dataQpCount_;
     NIXL_INFO << "OOB listen port: " << local_port;
 
     // Reject an unusable explicit interface before acquiring RDMA/GPU resources.
@@ -1036,20 +1043,22 @@ nixlDocaEngine::addRdmaQp(const std::string &remote_agent) {
                 rdma_qp->qp_write.push_back(std::move(qp));
             }
             rdma_qp->writeProgrammed.resize(dataQpCount_, false);
-            uint64_t *gpu_counter = nullptr;
-            const auto result =
-                doca_gpu_mem_alloc(gdevs[0].second,
-                                   sizeof(uint64_t),
-                                   64,
-                                   DOCA_GPU_MEM_TYPE_GPU_CPU,
-                                   reinterpret_cast<void **>(&gpu_counter),
-                                   reinterpret_cast<void **>(&rdma_qp->writeCompletedCpu));
-            if (result != DOCA_SUCCESS) {
-                throw std::runtime_error("Failed to allocate striped WRITE completion counter");
+            if (!nativeMode_) {
+                uint64_t *gpu_counter = nullptr;
+                const auto result =
+                    doca_gpu_mem_alloc(gdevs[0].second,
+                                       sizeof(uint64_t),
+                                       64,
+                                       DOCA_GPU_MEM_TYPE_GPU_CPU,
+                                       reinterpret_cast<void **>(&gpu_counter),
+                                       reinterpret_cast<void **>(&rdma_qp->writeCompletedCpu));
+                if (result != DOCA_SUCCESS) {
+                    throw std::runtime_error("Failed to allocate striped WRITE completion counter");
+                }
+                rdma_qp->writeCompletedGpu.get_deleter().gpu = gdevs[0].second;
+                rdma_qp->writeCompletedGpu.reset(gpu_counter);
+                *rdma_qp->writeCompletedCpu = 0;
             }
-            rdma_qp->writeCompletedGpu.get_deleter().gpu = gdevs[0].second;
-            rdma_qp->writeCompletedGpu.reset(gpu_counter);
-            *rdma_qp->writeCompletedCpu = 0;
         }
     }
     catch (const nixl::doca::verbs::teardown_error &e) {
@@ -1670,15 +1679,14 @@ nixlDocaEngine::registerMem(const nixlBlobDesc &mem,
         return NIXL_ERR_BACKEND;
     }
     try {
-        priv->mr =
-            std::make_unique<nixl::doca::verbs::mr>(memory_gpu,
-                                                    (void *)mem.addr,
-                                                    1,
-                                                    (size_t)mem.len,
-                                                    pd,
-                                                    nixl_mem == VRAM_SEG && memory_gpu != nullptr,
-                                                    nativeMode_ && nativeRelaxedOrdering_ &&
-                                                        nixl_mem == VRAM_SEG);
+        priv->mr = std::make_unique<nixl::doca::verbs::mr>(
+            memory_gpu,
+            (void *)mem.addr,
+            1,
+            (size_t)mem.len,
+            pd,
+            nixl_mem == VRAM_SEG && memory_gpu != nullptr,
+            nativeMode_ && nativeRelaxedOrdering_ && nixl_mem == VRAM_SEG);
         if (nativeMode_ && nixl_mem == VRAM_SEG) {
             NIXL_INFO << "GPUNETIO native data MR relaxed ordering="
                       << priv->mr->uses_relaxed_ordering();

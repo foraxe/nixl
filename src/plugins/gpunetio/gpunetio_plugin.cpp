@@ -63,6 +63,7 @@ get_backend_options() {
     params["gid_index"] = "";
     params["data_qp_count"] = "";
     params["native_device_api"] = "false";
+    params["native_qp_count"] = "1";
     params["native_relaxed_ordering"] = "false";
     return params;
 }
