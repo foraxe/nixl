@@ -160,13 +160,19 @@ public:
        uint32_t elem_num,
        size_t elem_size,
        struct ibv_pd *pd,
-       bool use_dmabuf);
+       bool use_dmabuf,
+       bool relaxed_ordering = false);
     mr(void *addr, size_t tot_size, uint32_t rkey);
     ~mr();
 
     [[nodiscard]] struct ibv_mr *
     get_mr() const {
         return ibmr;
+    }
+
+    [[nodiscard]] bool
+    uses_relaxed_ordering() const {
+        return relaxed_ordering_;
     }
 
     [[nodiscard]] uint32_t
@@ -201,6 +207,7 @@ private:
     uint32_t rkey;
     bool remote;
     int dmabuf_fd = -1;
+    bool relaxed_ordering_ = false;
 };
 
 } // namespace nixl::doca::verbs
