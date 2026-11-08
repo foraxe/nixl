@@ -1,0 +1,110 @@
+.ci/jenkins/lib/build-container-pr-matrix.yaml
+  s_51a7496212715b::t_db564440cfaf65 68
+benchmark/nixlbench/src/utils/utils.h
+  s_51a7496212715b::t_db564440cfaf65 110,140,265-267
+src/plugins/gpunetio/README.md
+  s_51a7496212715b::t_db564440cfaf65 41,43-44
+.ci/jenkins/lib/build-wheel-nightly-matrix.yaml
+  s_51a7496212715b::t_db564440cfaf65 24,127
+benchmark/nixlbench/src/utils/memos_key.h
+  s_51a7496212715b::t_db564440cfaf65 1-36
+benchmark/nixlbench/src/utils/meson.build
+  s_51a7496212715b::t_db564440cfaf65 21-22
+fern/docs/pages/getting-started/overview.md
+  s_51a7496212715b::t_db564440cfaf65 62
+src/core/meson.build
+  s_51a7496212715b::t_db564440cfaf65 48-51
+src/plugins/meson.build
+  s_51a7496212715b::t_db564440cfaf65 127-133
+.ci/jenkins/lib/build-container-matrix.yaml
+  s_51a7496212715b::t_db564440cfaf65 124,128
+test/unit/plugins/doca_memos/meson.build
+  s_51a7496212715b::t_db564440cfaf65 1-63
+src/plugins/doca_memos/doca_memos_backend.h
+  s_51a7496212715b::t_db564440cfaf65 1-287
+src/plugins/doca_memos/doca_memos_progress_engine.h
+  s_51a7496212715b::t_db564440cfaf65 1-297
+meson.build
+  s_51a7496212715b::t_db564440cfaf65 32,478-489
+  s_51a7496212715b::t_3070fd5a0bb842 490-491
+.ci/jenkins/lib/build-llm-container-matrix.yaml
+  s_51a7496212715b::t_db564440cfaf65 126,348
+test/unit/plugins/doca_memos/doca_pe.h
+  s_51a7496212715b::t_db564440cfaf65 1-139
+test/unit/plugins/doca_memos/doca_types.h
+  s_51a7496212715b::t_db564440cfaf65 1-66
+src/core/nixl_plugin_manager.cpp
+  s_51a7496212715b::t_db564440cfaf65 878-880
+src/plugins/doca_memos/doca_memos_plugin.cpp
+  s_51a7496212715b::t_db564440cfaf65 1-56
+.ci/jenkins/lib/build-wheel-matrix.yaml
+  s_51a7496212715b::t_db564440cfaf65 288,312
+fern/docs/pages/user-guide/backends/index.md
+  s_51a7496212715b::t_db564440cfaf65 30,101-105,130
+src/plugins/doca_memos/meson.build
+  s_51a7496212715b::t_db564440cfaf65 1-81
+test/unit/plugins/doca_memos/doca_compat.h
+  s_51a7496212715b::t_db564440cfaf65 1-59
+src/plugins/doca_memos/doca_memos_progress_engine.cpp
+  s_51a7496212715b::t_db564440cfaf65 1-1207
+.ci/docs/ci-overview.md
+  s_51a7496212715b::t_db564440cfaf65 337-363
+.ci/jenkins/lib/test-matrix.yaml
+  s_51a7496212715b::t_db564440cfaf65 123
+benchmark/nixlbench/src/worker/nixl/nixl_worker.cpp
+  s_51a7496212715b::t_db564440cfaf65 33,379-392,1157-1184,1209,1329-1330,1386-1400,1504-1528,2297-2352,2362-2425,2433-2477
+  s_51a7496212715b::t_4168c610829004 2478
+fern/docs.yml
+  s_51a7496212715b::t_db564440cfaf65 103-105
+src/plugins/doca_memos/README.md
+  s_51a7496212715b::t_db564440cfaf65 1-323
+benchmark/nixlbench/src/utils/utils.cpp
+  s_51a7496212715b::t_db564440cfaf65 147,158,359-362,597-600,756-770,821-823,827-830,866-871,1103-1104,1216
+test/unit/plugins/doca_memos/doca_ctx.h
+  s_51a7496212715b::t_db564440cfaf65 1-102
+test/unit/plugins/doca_memos/doca_error.h
+  s_51a7496212715b::t_db564440cfaf65 1-86
+.ci/scripts/registry-login.sh
+  s_51a7496212715b::t_db564440cfaf65 1-44
+benchmark/nixlbench/README.md
+  s_51a7496212715b::t_db564440cfaf65 568,838-850
+  s_51a7496212715b::t_672f4c86e340e9 851
+fern/docs/pages/user-guide/backends/doca-memos.md
+  s_51a7496212715b::t_db564440cfaf65 1-73
+test/unit/plugins/doca_memos/doca_memos_backend_test.cpp
+  s_51a7496212715b::t_db564440cfaf65 1-2238
+test/unit/plugins/doca_memos/doca_memos_mocks.h
+  s_51a7496212715b::t_db564440cfaf65 1-228
+benchmark/nixlbench/tests/memos_key_test.cpp
+  s_51a7496212715b::t_db564440cfaf65 1-70
+test/unit/plugins/meson.build
+  s_51a7496212715b::t_db564440cfaf65 107-124
+benchmark/nixlbench/src/worker/nixl/nixl_worker.h
+  s_51a7496212715b::t_db564440cfaf65 48-50
+test/unit/plugins/doca_memos/README.md
+  s_51a7496212715b::t_db564440cfaf65 1-20
+src/plugins/gpunetio/gpunetio_kernels.cu
+  s_51a7496212715b::t_db564440cfaf65 228-229,376,382-390,427-428
+src/plugins/doca_memos/doca_memos_backend.cpp
+  s_51a7496212715b::t_db564440cfaf65 1-563
+test/unit/plugins/doca_memos/doca_memos_mocks.cpp
+  s_51a7496212715b::t_db564440cfaf65 1-849
+benchmark/nixlbench/tests/meson.build
+  s_51a7496212715b::t_db564440cfaf65 4-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6892a64eace38f629be4514c3c70ab59108e81fc",
+  "prompts": {},
+  "sessions": {
+    "s_51a7496212715b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a142b2-d7cc-7121-ab7e-39d341e913f4",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
