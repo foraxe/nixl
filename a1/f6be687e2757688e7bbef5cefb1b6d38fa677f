@@ -1,0 +1,23 @@
+benchmark/nixlbench/src/worker/nixl/nixl_worker.cpp
+  s_51a7496212715b::t_4d18dfbf7af286 270-272
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_51a7496212715b::t_4d18dfbf7af286 1663
+src/plugins/gpunetio/README.md
+  s_51a7496212715b::t_4d18dfbf7af286 38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a1f6be687e2757688e7bbef5cefb1b6d38fa677f",
+  "prompts": {},
+  "sessions": {
+    "s_51a7496212715b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a142b2-d7cc-7121-ab7e-39d341e913f4",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
