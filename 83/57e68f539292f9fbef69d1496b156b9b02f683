@@ -1,0 +1,33 @@
+benchmark/nixlbench/README.md
+  s_51a7496212715b::t_e21dc5f214bc0e 652-653
+benchmark/nixlbench/src/worker/nixl/nixl_worker.cpp
+  s_51a7496212715b::t_e21dc5f214bc0e 270
+benchmark/nixlbench/src/utils/utils.h
+  s_51a7496212715b::t_e21dc5f214bc0e 224
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_51a7496212715b::t_e21dc5f214bc0e 321-327,1670
+src/plugins/gpunetio/gpunetio_backend.h
+  s_51a7496212715b::t_e21dc5f214bc0e 155
+src/plugins/gpunetio/README.md
+  s_51a7496212715b::t_e21dc5f214bc0e 38-39,55-56
+benchmark/nixlbench/src/utils/utils.cpp
+  s_51a7496212715b::t_e21dc5f214bc0e 276,412,737,1204-1205
+src/plugins/gpunetio/gpunetio_plugin.cpp
+  s_51a7496212715b::t_e21dc5f214bc0e 63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8357e68f539292f9fbef69d1496b156b9b02f683",
+  "prompts": {},
+  "sessions": {
+    "s_51a7496212715b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a142b2-d7cc-7121-ab7e-39d341e913f4",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
