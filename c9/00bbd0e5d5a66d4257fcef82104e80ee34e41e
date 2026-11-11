@@ -1,0 +1,39 @@
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_3b5800b474bc34 66-79
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_745803c9b6007a 253-262,1639-1645
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_8c6d94c9405b53 161
+src/plugins/gpunetio/gpunetio_plugin.cpp
+  s_f4ecdc97fbe5c3::t_66b4c15bf654f9 64
+src/plugins/gpunetio/verbs/registration_access.h
+  s_f4ecdc97fbe5c3::t_d604d7fe098f59 1-31
+src/plugins/gpunetio/verbs/verbs.cpp
+  s_f4ecdc97fbe5c3::t_eaeaf6a2163ed5 21,632-633,670-681,696-700
+src/plugins/gpunetio/verbs/verbs.h
+  s_f4ecdc97fbe5c3::t_6fdbe0f0fa2839 163-164,173-177,210
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_5fdfd5686805f9 3-25
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_bfaff4d845b8d6 18-23
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_d49dc04e161cf8 45,71-78,83,162-169,222,224,232-240,287,296-306
+test/unit/plugins/gpunetio/registration_access_test.cpp
+  s_f4ecdc97fbe5c3::t_94e54bffbd517d 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c900bbd0e5d5a66d4257fcef82104e80ee34e41e",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
