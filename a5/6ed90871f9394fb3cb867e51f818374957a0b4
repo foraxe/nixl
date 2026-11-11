@@ -1,25 +1,36 @@
 src/plugins/gpunetio/README.md
   s_f4ecdc97fbe5c3::t_98fbc6a38625f4 66-79
+  s_f4ecdc97fbe5c3::t_3b5800b474bc34 66-79
 src/plugins/gpunetio/gpunetio_backend.cpp
   s_f4ecdc97fbe5c3::t_f90cb481fe344e 253-262,1639-1645
+  s_f4ecdc97fbe5c3::t_745803c9b6007a 253-262,1639-1645
 src/plugins/gpunetio/gpunetio_backend.h
   s_f4ecdc97fbe5c3::t_89259d287b32dd 161
+  s_f4ecdc97fbe5c3::t_8c6d94c9405b53 161
 src/plugins/gpunetio/gpunetio_plugin.cpp
   s_f4ecdc97fbe5c3::t_4c8a94b54582cc 64
+  s_f4ecdc97fbe5c3::t_66b4c15bf654f9 64
 src/plugins/gpunetio/verbs/registration_access.h
   s_f4ecdc97fbe5c3::t_956fc04c51f36a 1-31
+  s_f4ecdc97fbe5c3::t_d604d7fe098f59 1-31
 src/plugins/gpunetio/verbs/verbs.cpp
   s_f4ecdc97fbe5c3::t_1cd6ac21320087 631-632,669-680,695-699
+  s_f4ecdc97fbe5c3::t_eaeaf6a2163ed5 631-632,669-680,695-699
 src/plugins/gpunetio/verbs/verbs.h
   s_f4ecdc97fbe5c3::t_267a33606275ce 51-70,183-184,193-197,230
+  s_f4ecdc97fbe5c3::t_6fdbe0f0fa2839 183-184,193-197,230
 test/unit/plugins/gpunetio/README.md
   s_f4ecdc97fbe5c3::t_a8a620c95f3a45 3-25
+  s_f4ecdc97fbe5c3::t_5fdfd5686805f9 3-25
 test/unit/plugins/gpunetio/meson.build
   s_f4ecdc97fbe5c3::t_79dfb1abe01f3b 18-23
+  s_f4ecdc97fbe5c3::t_bfaff4d845b8d6 18-19,22-23
 test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
   s_f4ecdc97fbe5c3::t_49dc013041b699 45,71-78,83,162-169,222,224,232-240,287,296-306
+  s_f4ecdc97fbe5c3::t_d49dc04e161cf8 45,71-78,83,162-169,222,224,232-240,287,296-306
 test/unit/plugins/gpunetio/registration_access_test.cpp
   s_f4ecdc97fbe5c3::t_01b7be60242d64 1-35
+  s_f4ecdc97fbe5c3::t_94e54bffbd517d 1-2,4-35
 ---
 {
   "schema_version": "authorship/3.0.0",
