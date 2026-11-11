@@ -1,0 +1,25 @@
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_667c833efc1bd1 590-594,627,928,974-979,1001-1006
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_7cbe18d80f449f 188
+src/plugins/gpunetio/verbs/verbs.cpp
+  s_f4ecdc97fbe5c3::t_c952885e783425 148-153,165-169,190,196,208,223,229,235,241,247,253,259,266,272-273,280,289,298,307,316,325,329,370-374,383,388-392,417-422,566-567,574,583,592,601,610,619,623
+src/plugins/gpunetio/verbs/verbs.h
+  s_f4ecdc97fbe5c3::t_fa81e6caa5eb0e 28,51-55,65-67,77-78,108,132-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1976f679c97225080dfd3e42f95150ffb313446c",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
