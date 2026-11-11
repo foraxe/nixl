@@ -1,0 +1,29 @@
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_0c93af3d34ff1b 107-112
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_0c93af3d34ff1b 82-83
+src/api/device/gpu/nixl_device_batch.cuh
+  s_f4ecdc97fbe5c3::t_5d8c1fefd650fc 309-311,313,326,464
+src/api/device/gpu/impl/gpunetio/device_gpunetio_compat.cuh
+  s_f4ecdc97fbe5c3::t_21f3b33a92f1b6 79-81
+  s_f4ecdc97fbe5c3::t_5d8c1fefd650fc 75
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_f6d24eef6da55f 434,464,811
+  s_f4ecdc97fbe5c3::t_5d8c1fefd650fc 141,171,179,181-182,188,233,242,246,284,695-704,850-854
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8b7483ca21cc0c30cb3d1563914b41157ea265aa",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
