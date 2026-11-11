@@ -1,0 +1,61 @@
+meson_options.txt
+  s_f4ecdc97fbe5c3::t_6f8f2984757d2c 53
+src/api/device/gpu/device_types.cuh
+  s_f4ecdc97fbe5c3::t_b34c2364a51627 45
+src/api/device/gpu/impl/device_dispatch.cuh
+  s_f4ecdc97fbe5c3::t_351c9c3fc4cf2a 62-85,100-101,151-152,185-221
+src/api/device/gpu/impl/gpunetio/device_gpunetio.cuh
+  s_f4ecdc97fbe5c3::t_d8e5896396d020 1-254
+src/api/device/gpu/impl/gpunetio/device_gpunetio_compat.cuh
+  s_f4ecdc97fbe5c3::t_064f4fc22b54b8 1-83
+src/api/device/gpu/impl/gpunetio/device_gpunetio_types.h
+  s_f4ecdc97fbe5c3::t_2415a94efe1f9b 1-95
+src/api/device/gpu/meson.build
+  s_f4ecdc97fbe5c3::t_cc7525f3778451 19,29-34
+src/api/device/gpu/nixl_device.cuh
+  s_f4ecdc97fbe5c3::t_269f9d8708e922 84-95
+src/api/device/gpu/nixl_device_batch.cuh
+  s_f4ecdc97fbe5c3::t_e2092f983a5fdb 1-408
+src/core/nixl_agent.cpp
+  s_f4ecdc97fbe5c3::t_aca2103678bd94 613,615-616
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_b6541a9064b015 57-80
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_703f5f886ecbd6 278-289,352-354,458-478,624-627,630,638,642-653,675,691-699,739-741,1542-1549,1608-1616,1655,1740-1742,2008-2010
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_a0693a85040be3 22,70,73-82,160-167
+src/plugins/gpunetio/gpunetio_backend_aux.h
+  s_f4ecdc97fbe5c3::t_9e54072c44aa07 244-245
+src/plugins/gpunetio/gpunetio_device_memview.cpp
+  s_f4ecdc97fbe5c3::t_132fa938f6499f 1-270
+src/plugins/gpunetio/gpunetio_device_memview.h
+  s_f4ecdc97fbe5c3::t_a94ec7b2651475 1-38
+src/plugins/gpunetio/gpunetio_plugin.cpp
+  s_f4ecdc97fbe5c3::t_cbe9b0cce7e87a 63
+src/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_9c50e425331731 20-22,26-27,36-37
+test/gtest/unit/agent/agent.cpp
+  s_f4ecdc97fbe5c3::t_fab50dc0c6554b 1280-1307
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_bd06dd6904b929 21-38
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_474e3b3b1025f2 30-37
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_c7febaec4b9b58 1-312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c65fddafada0362668aab6897f91a9e5acb74723",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
