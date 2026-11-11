@@ -1,0 +1,29 @@
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_f0b1d5b213383c 66-75,79-80
+src/api/device/gpu/impl/gpunetio/device_gpunetio_compat.cuh
+  s_f4ecdc97fbe5c3::t_f0b1d5b213383c 57,68
+  s_f4ecdc97fbe5c3::t_492c958a393b1c 69
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_f0b1d5b213383c 21-26
+src/api/device/gpu/nixl_device_batch.cuh
+  s_f4ecdc97fbe5c3::t_f0b1d5b213383c 19-21,34,41-42,154-155,161-170,181,270,276-283,286,290-292,302-333,344-345,431-435,461-464
+  s_f4ecdc97fbe5c3::t_6f74d7f4eb7f6c 465
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_f0b1d5b213383c 74,76-122,130-131,163-190,202-204,216,231-238,354-373,390-403
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d3b4f32908ece747067138cd834cde3d7d622d62",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}

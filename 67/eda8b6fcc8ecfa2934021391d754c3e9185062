@@ -1,0 +1,50 @@
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_6b76859f910486 62-95
+  s_f4ecdc97fbe5c3::t_d15bf30952b900 62-95
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_6837c62aab5d98 361-364,366-370,375-376,1038,1659-1666
+  s_f4ecdc97fbe5c3::t_cac0efc24b0a5d 361-364,366-370,375-376,1038,1659-1666
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_7acf5e7e3fd377 168-169
+  s_f4ecdc97fbe5c3::t_07ce26e1e60c5f 168-169
+src/plugins/gpunetio/gpunetio_backend_aux.h
+  s_f4ecdc97fbe5c3::t_8312db072cf7df 66-96
+src/plugins/gpunetio/gpunetio_device_memview.cpp
+  s_f4ecdc97fbe5c3::t_d752a77efb0257 6,40-54,56-57,66-67,73-74,80-81,86-90,106,161-168,174-177,201-202,218,221-222,247,272-273,286-287,289,291-296,298-299,303
+  s_f4ecdc97fbe5c3::t_8f94ac89fccd9c 6,40-54,56-57,66-67,73-74,80-81,86-90,106,161-168,174-177,201-202,218,221-222,247,272-273,286-287,289,291-296,298-299,303
+src/plugins/gpunetio/gpunetio_device_memview.h
+  s_f4ecdc97fbe5c3::t_cb7dc784065ce7 18,23,34-35
+  s_f4ecdc97fbe5c3::t_f0cf4eae9124ed 18,23,34-35
+src/plugins/gpunetio/gpunetio_plugin.cpp
+  s_f4ecdc97fbe5c3::t_2ef5d5f2964940 64
+  s_f4ecdc97fbe5c3::t_87bbaa0cf046bc 64
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_f6a709598da8e8 3-30
+  s_f4ecdc97fbe5c3::t_5e36ab0d1de84f 3-30
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_cf455db55908d5 23-27
+  s_f4ecdc97fbe5c3::t_12d9004fd8f93e 23-24,27
+test/unit/plugins/gpunetio/native_pool_options_test.cpp
+  s_f4ecdc97fbe5c3::t_b61b5cfa42aa7e 1-49
+  s_f4ecdc97fbe5c3::t_817eab8afb8e93 1-2,4-49
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_c644966d63a7c6 18-19,46-72,111-139,327-331,364-366,374-377,381-383,411-423,437-438,445-458,460-487,489,491,493-496,501,503,515-534,551-558,565-616,627
+  s_f4ecdc97fbe5c3::t_a9cf5b480865e3 18-19,46-72,111-139,327-331,364-366,374-377,381-383,411-423,437-438,445-458,460-487,489,491,493-496,501,503,515-534,551-558,565-616,627
+  s_f4ecdc97fbe5c3::t_9b23608eb6173a 459,497-500,502,504-506,508-514,559-564
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "67eda8b6fcc8ecfa2934021391d754c3e9185062",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
