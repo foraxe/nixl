@@ -1,0 +1,22 @@
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_f64fec9135ccce 430-489,787-806,808-827
+  s_f4ecdc97fbe5c3::t_cc70c09cb32ad2 807
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_75fb8eb60a334c 76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1278c501e443f01f96ef1d783e24ad83658bbdf4",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
