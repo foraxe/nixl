@@ -1,0 +1,47 @@
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_65ec2ceaf865a8 62-109
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_7a35a45cc4e0cc 19,254-263,343-346,348-352,357-358,1020,1641-1652
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_0aa2a90e1bc089 161,168-169
+src/plugins/gpunetio/gpunetio_device_memview.cpp
+  s_f4ecdc97fbe5c3::t_b115c9d2f21f69 4,7,41-55,57-58,67-68,74-75,81-82,87-91,107,162-169,175-178,202-203,219,222-223,248,273-274,287-288,290,292-297,299-300,304
+src/plugins/gpunetio/gpunetio_device_memview.h
+  s_f4ecdc97fbe5c3::t_0750b68a4cd797 18,23,34-35
+src/plugins/gpunetio/gpunetio_native_options.h
+  s_f4ecdc97fbe5c3::t_d2d17ad3416b55 1-42
+src/plugins/gpunetio/gpunetio_plugin.cpp
+  s_f4ecdc97fbe5c3::t_ab10e78a7b435e 64-65
+src/plugins/gpunetio/verbs/registration_access.h
+  s_f4ecdc97fbe5c3::t_14d0f8aeba71e4 1-31
+src/plugins/gpunetio/verbs/verbs.cpp
+  s_f4ecdc97fbe5c3::t_f01ea8a1e21737 21,632-633,670-681,696-700
+src/plugins/gpunetio/verbs/verbs.h
+  s_f4ecdc97fbe5c3::t_d73b29605a5726 163-164,173-177,210
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_5eba5489a43191 3-53
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_cdcc928a0b5b20 18-27
+test/unit/plugins/gpunetio/native_pool_options_test.cpp
+  s_f4ecdc97fbe5c3::t_4ffb09e63b67ab 1-49
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_5e24574838dfe8 18-19,47-74,100-107,111-119,121-141,220-227,250-254,285,287-289,297-311,334-346,360-361,368-391,393-446,463-524,535
+test/unit/plugins/gpunetio/registration_access_test.cpp
+  s_f4ecdc97fbe5c3::t_306c2bed602401 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "85107b9e4c05e14b837ee328c44886c18ef9d5dd",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
