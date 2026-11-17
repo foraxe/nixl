@@ -8,6 +8,7 @@ src/api/device/gpu/impl/gpunetio/device_gpunetio.cuh
   s_f4ecdc97fbe5c3::t_d8e5896396d020 1-254
 src/api/device/gpu/impl/gpunetio/device_gpunetio_compat.cuh
   s_f4ecdc97fbe5c3::t_064f4fc22b54b8 1-10,17-62,64-73,76-92
+  s_f4ecdc97fbe5c3::t_014d8f4b01109f 11-16
 src/api/device/gpu/impl/gpunetio/device_gpunetio_types.h
   s_f4ecdc97fbe5c3::t_2415a94efe1f9b 1-95
 src/api/device/gpu/meson.build
@@ -16,10 +17,12 @@ src/api/device/gpu/nixl_device.cuh
   s_f4ecdc97fbe5c3::t_269f9d8708e922 84-95
 src/api/device/gpu/nixl_device_batch.cuh
   s_f4ecdc97fbe5c3::t_e2092f983a5fdb 1-18,22-33,35-40,43-153,156-160,171-180,182-189,198-230,235-279,281-285,298-299,301-303,307-315,350-359,362-446,452-476,482-497
+  s_f4ecdc97fbe5c3::t_014d8f4b01109f 190-197,231-234,288-291,322-324
 src/core/nixl_agent.cpp
   s_f4ecdc97fbe5c3::t_aca2103678bd94 613,615-616
 src/plugins/gpunetio/README.md
   s_f4ecdc97fbe5c3::t_b6541a9064b015 59-63,109-112,116-124
+  s_f4ecdc97fbe5c3::t_014d8f4b01109f 103-108,113-115
 src/plugins/gpunetio/gpunetio_backend.cpp
   s_f4ecdc97fbe5c3::t_703f5f886ecbd6 283-294,375,481-501,647-650,653,661,665-676,698,714-722,762-764,1566-1573,1632-1640,1679,1764-1766,2069-2071
 src/plugins/gpunetio/gpunetio_backend.h
@@ -38,10 +41,12 @@ test/gtest/unit/agent/agent.cpp
   s_f4ecdc97fbe5c3::t_fab50dc0c6554b 1281-1308
 test/unit/plugins/gpunetio/README.md
   s_f4ecdc97fbe5c3::t_bd06dd6904b929 64-81
+  s_f4ecdc97fbe5c3::t_014d8f4b01109f 60-62
 test/unit/plugins/gpunetio/meson.build
   s_f4ecdc97fbe5c3::t_474e3b3b1025f2 36-43
 test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
   s_f4ecdc97fbe5c3::t_c7febaec4b9b58 1-17,20-46,87-111,120-122,124,201-207,210-240,269-279,283-293,295-308,501-522,528-558,560-566,571-592,606-618,621-626,728-743,903-912,914-921
+  s_f4ecdc97fbe5c3::t_014d8f4b01109f 73-84,666-676
 ---
 {
   "schema_version": "authorship/3.0.0",
