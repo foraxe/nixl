@@ -1,0 +1,52 @@
+{
+  "source_commit": "df0d104093f6f6a67932b13073fbe357a460aa2a",
+  "base_commit": "635278fe6b954b4d737bf114ed40f8dd16acc575",
+  "production_plugin_device_source_equals_e56": true,
+  "release_werror_targets": {
+    "enabled": 294,
+    "disabled": 294
+  },
+  "cpu_unit_passed": 246,
+  "separately_selected_gpu_host_tests_passed": 4,
+  "netif_discovery_passed": 2,
+  "pool_options_passed": true,
+  "native_four_qp_checks": [
+    {
+      "label": "dram",
+      "exit_code": 0,
+      "pass_lines": [
+        "PASS DRAM qps=4 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    {
+      "label": "vram",
+      "exit_code": 0,
+      "pass_lines": [
+        "PASS VRAM qps=4 scalar and CTA batch GET; data, guards and completion validated"
+      ]
+    },
+    {
+      "label": "fifo-cq-fault",
+      "exit_code": 0,
+      "pass_lines": [
+        "PASS real CQ error, sticky refusal, independent healthy channel",
+        "PASS pool idle release and failed-channel retention; QUARANTINED_UNTIL_PROCESS_EXIT"
+      ]
+    }
+  ],
+  "disabled_consumer_no_doca_include_library_path": true,
+  "binary_sha256": {
+    "test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test": "3801e986b8f763dd117b53ff6d59f3bb80638c3cd0761021d79e0aa7ceba3283",
+    "src/core/libnixl.so": "9ecc209d93441f6104aaec2950d896b2abb3036a93df4d802b0309b3ff27a8fd",
+    "src/utils/common/libnixl_common.so": "d0435a2580ca68fd6c40f7043d6a3fb36dc11b917dbee9dfa1521066ba29c38a",
+    "src/utils/serdes/libserdes.so": "16c7d9128d57d1ddcc4a373abf2e7d832afccd9a282d235c6fd2bcd8b2bb31bf",
+    "src/utils/device/libdevice_utils.so": "75704a621c31b7e0aada626da45b6b64d6d0a55da76065f51bcf537b9b22bbd4",
+    "src/utils/device/libnixl_device_ops_cuda.so": "1f140b52a4bd7da0ef8609a020f95e7ee551144f1afa6739bd66dc8d5e37d529",
+    "src/utils/device/proxy/libnixl_device_proxy.so": "d472dffe14497b4063de6503ed90ee1c93c4bd9d4c6f70f6122091c3dafc86cb",
+    "src/utils/stream/libstream.so": "ed7bef7f7f59a98df88508683eaae58dc717ffd10d9aebd66d83bf48bb334748",
+    "src/infra/libnixl_build.so": "c232a6b64e6fdc4a53a7e299c0945a9b211001fe41edfb867fe349a9537d6f13",
+    "src/plugins/gpunetio/libplugin_GPUNETIO.so": "ccd8eb1f7daab554974bcbef8167b07e2e2c15dfaefbd7641005c3d414ae290c"
+  },
+  "full_unit_tests_passed": 250,
+  "full_unit_suites": 29
+}
