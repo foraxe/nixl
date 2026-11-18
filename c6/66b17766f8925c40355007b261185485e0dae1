@@ -1,0 +1,65 @@
+research/gpunetio_doca35_get_closeout/LICENSE
+  s_f4ecdc97fbe5c3::t_3ee044f5204008 1-201
+research/gpunetio_doca35_get_closeout/NIXL_SRC_SHA256SUMS
+  s_f4ecdc97fbe5c3::t_590889283ab01f 1-433
+research/gpunetio_doca35_get_closeout/README.md
+  s_f4ecdc97fbe5c3::t_fa71793f02247e 1-48
+research/gpunetio_doca35_get_closeout/SHA256SUMS
+  s_f4ecdc97fbe5c3::t_38e130c8b9a920 1-23
+research/gpunetio_doca35_get_closeout/baseline/build_baseline.sh
+  s_f4ecdc97fbe5c3::t_ccb4ddb1209bd1 1-21
+research/gpunetio_doca35_get_closeout/baseline/python/sglang/srt/engram_share/rdma/__init__.py
+  s_f4ecdc97fbe5c3::t_5415923882a62a 1
+research/gpunetio_doca35_get_closeout/baseline/python/sglang/srt/engram_share/rdma/dedup_rows.py
+  s_f4ecdc97fbe5c3::t_8d653867a0d179 1-68
+research/gpunetio_doca35_get_closeout/baseline/python/sglang/srt/engram_share/rdma/engram_transport.py
+  s_f4ecdc97fbe5c3::t_29b1c1cfbbfb69 1-166
+research/gpunetio_doca35_get_closeout/baseline/python/sglang/srt/engram_share/rdma/read_group.py
+  s_f4ecdc97fbe5c3::t_235e5a63208989 1-179
+research/gpunetio_doca35_get_closeout/baseline/python/sglang/srt/engram_share/rdma/read_plan.py
+  s_f4ecdc97fbe5c3::t_361d786d4c1f38 1-237
+research/gpunetio_doca35_get_closeout/baseline/python/sglang/srt/engram_share/rdma/row264_kernels.py
+  s_f4ecdc97fbe5c3::t_19f97647904845 1-69
+research/gpunetio_doca35_get_closeout/build.sh
+  s_f4ecdc97fbe5c3::t_2fdf85dae86668 1-26
+research/gpunetio_doca35_get_closeout/candidate_readplan.py
+  s_f4ecdc97fbe5c3::t_36aef439991b08 1-271
+research/gpunetio_doca35_get_closeout/matched_readplan.py
+  s_f4ecdc97fbe5c3::t_84ae97b7ed3f62 1-354
+research/gpunetio_doca35_get_closeout/nixl/LICENSE
+  s_f4ecdc97fbe5c3::t_7dfda26f4b6b8b 1-210
+research/gpunetio_doca35_get_closeout/results/baseline-graph-post.json
+  s_f4ecdc97fbe5c3::t_1d58ac4407bead 1-15412
+research/gpunetio_doca35_get_closeout/results/baseline-graph-pre-valid.json
+  s_f4ecdc97fbe5c3::t_8cf44f80af9dc5 1-15411
+research/gpunetio_doca35_get_closeout/results/device-fault-excerpt.txt
+  s_f4ecdc97fbe5c3::t_f12407c8a1e930 1-2
+research/gpunetio_doca35_get_closeout/results/equal-optimized-graph-repeat.json
+  s_f4ecdc97fbe5c3::t_d1c31cd7e25f1e 1-17812
+research/gpunetio_doca35_get_closeout/results/equal-optimized-graph.json
+  s_f4ecdc97fbe5c3::t_7220dba5ff55f3 1-24104
+research/gpunetio_doca35_get_closeout/results/selected-decode-overlap.json
+  s_f4ecdc97fbe5c3::t_7b15d39c5b17ab 1-6861
+research/gpunetio_doca35_get_closeout/src/engram_abi3_multirail_dedup_auto.cu
+  s_f4ecdc97fbe5c3::t_5412708fd74d10 1-607
+research/gpunetio_doca35_get_closeout/src/engram_multirail_fifo_adaptive_base.cu
+  s_f4ecdc97fbe5c3::t_11dd9ff3ded9e5 1-1299
+research/gpunetio_doca35_get_closeout/src/sglang_delivered_native_7fde8d0.cu
+  s_f4ecdc97fbe5c3::t_e7649495020579 1-754
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c666b17766f8925c40355007b261185485e0dae1",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
