@@ -1,0 +1,23 @@
+research/gpunetio_doca35_get_closeout/CURRENT_MAIN_VALIDATION.md
+  s_f4ecdc97fbe5c3::t_3841d0cd15a632 1-18
+research/gpunetio_doca35_get_closeout/SHA256SUMS
+  s_f4ecdc97fbe5c3::t_2f5ef8efb18399 1,18
+research/gpunetio_doca35_get_closeout/results/current-main-validation.json
+  s_f4ecdc97fbe5c3::t_ab05fceb366ef3 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d13a3caa4e6aa2730157297820e2db15a97e0b68",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
