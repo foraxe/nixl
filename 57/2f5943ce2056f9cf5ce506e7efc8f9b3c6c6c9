@@ -1,0 +1,20 @@
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_7ddf066a3057ef 78-86,133-139,143,169-174,193,734-738,752-753,770,787,795,801-802,821-823,833-834,1011
+  s_f4ecdc97fbe5c3::t_6c0eef5c87ad65 87,176-177,743-744,771,788,798-800,816,818
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "572f5943ce2056f9cf5ce506e7efc8f9b3c6c6c9",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
