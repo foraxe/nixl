@@ -1,0 +1,75 @@
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_1a7cc34967782d 24-26,55-57,61-63
+  s_f4ecdc97fbe5c3::t_1841919c1b5364 13
+  s_f4ecdc97fbe5c3::t_7d727de443d161 14-15,21-23,82-84
+src/plugins/gpunetio/gpunetio_device_memview.cpp
+  s_f4ecdc97fbe5c3::t_6116c6182d6dba 300-303,346
+  s_f4ecdc97fbe5c3::t_01e68d65b550ce 319-321,336-337
+  s_f4ecdc97fbe5c3::t_4ba4b1a042dd6c 4-5,16-23,26,30-31,42,47,49,61,78,118,175-177,179,181,217,220,231,239,257,259,292,313,342-345,355
+  s_f4ecdc97fbe5c3::t_aeca831453e697 283
+  s_f4ecdc97fbe5c3::t_db938721c6aaf4 24-25,27-28,43-44,48,50,57-60,62,68-77,79,178,180,206-210,215-216,218-219,232-238,245-250,253-256,284-286,294-299,314-318,322-325,329-333,347-354
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_9e06338f3c37f7 123-124,127-131,146-149,152-153,155-162,165-167,170,173-175
+  s_f4ecdc97fbe5c3::t_3352d56304bc13 242-248,262,264-265
+  s_f4ecdc97fbe5c3::t_2c7363ef8ed85f 484,917
+  s_f4ecdc97fbe5c3::t_d22bb28670dd3e 860
+  s_f4ecdc97fbe5c3::t_239082addbe20e 113-121,125-126,132-145,150-151,154,163-164,172,579-585,651,656
+  s_f4ecdc97fbe5c3::t_60261fa6587c90 95
+  s_f4ecdc97fbe5c3::t_1a7cc34967782d 302,720,753-754,777-778,781-793,858-859,915-916,980-981,1008
+  s_f4ecdc97fbe5c3::t_70d0f491ec820b 122,652-654
+  s_f4ecdc97fbe5c3::t_b36140768b0f84 7,63,67,76,98,104,199,219,274,277,279,400
+  s_f4ecdc97fbe5c3::t_fb06b22d1ecb93 832-835,839-840,845-853,857,863-872,878-880,882,884-886,888-889,892-893,895-912,918-922,924-927,930-936,938,943-947,949
+  s_f4ecdc97fbe5c3::t_a467fc6c6f5343 80,343
+  s_f4ecdc97fbe5c3::t_e578e113002e21 105-108,281-285,727-730,744-747,760-763
+  s_f4ecdc97fbe5c3::t_599b75b653d853 459-467,469-477,479-480,482-483,486-489,492-494,498-515,518-523,525-535,537-540,542-543,547-548
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_b6245e03ea9ab3 61-64,68,82-83,120-123,129-130
+  s_f4ecdc97fbe5c3::t_6e49d366e6877e 65-67
+src/api/device/gpu/impl/gpunetio/device_gpunetio_compat.cuh
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 17,24,26
+src/api/device/gpu/impl/gpunetio/device_gpunetio.cuh
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 91-93,96-109,216-220
+src/plugins/gpunetio/gpunetio_backend.cpp
+  s_f4ecdc97fbe5c3::t_180c48314e7908 1381-1384
+  s_f4ecdc97fbe5c3::t_1de77d17e47ec9 254,258-263,267-273,277,1187-1189,1192,1378-1380,1387
+  s_f4ecdc97fbe5c3::t_aeca831453e697 678-679,1579-1580,1721-1727
+  s_f4ecdc97fbe5c3::t_db938721c6aaf4 274-275
+src/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 20
+src/plugins/gpunetio/gpunetio_device_memview.h
+  s_f4ecdc97fbe5c3::t_4ba4b1a042dd6c 3-4,6,20-21,23-32,39-40,42-43,48-50,60,64-65
+  s_f4ecdc97fbe5c3::t_6116c6182d6dba 61
+  s_f4ecdc97fbe5c3::t_db938721c6aaf4 22,33-38,41,62-63
+meson.build
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 342
+src/api/device/gpu/impl/device_dispatch.cuh
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 70,174-175,195,204-206
+src/api/device/gpu/impl/gpunetio/device_gpunetio_types.h
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 36,41-42
+src/plugins/gpunetio/gpunetio_backend.h
+  s_f4ecdc97fbe5c3::t_32f5e49d12af80 58-63,72-76
+src/api/device/gpu/meson.build
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 30
+src/api/device/gpu/nixl_device.cuh
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 84-91,94-95,99
+src/api/device/gpu/impl/gpunetio/device_gpunetio_batch.cuh
+  s_f4ecdc97fbe5c3::t_c62a861fc561a6 1-517
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_77ee15135faf53 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "227c8321908e09879e464d6468f1f196afb57514",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
