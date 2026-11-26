@@ -1,0 +1,19 @@
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_904506745060e6 5-10,13-19,34-38,80-84,93-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "691f7857c8e3d28e76c1f243126ef318dc39dbb4",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
