@@ -1,0 +1,23 @@
+test/gtest/unit/agent/agent.cpp
+  s_f4ecdc97fbe5c3::t_c841d53710cecd 1307-1334
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_ad02e7be2ea2ff 3-45,64-106
+test/unit/plugins/gpunetio/meson.build
+  s_f4ecdc97fbe5c3::t_8546153ca17465 18-23,36-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "46f7deffb6cd0070b6c67e4baf2ab647c5a29f5d",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
