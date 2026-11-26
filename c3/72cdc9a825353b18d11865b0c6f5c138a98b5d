@@ -1,0 +1,32 @@
+src/api/device/gpu/impl/gpunetio/device_gpunetio.cuh
+  s_f4ecdc97fbe5c3::t_293c366fa22913 100-101,168-169,198-207,336
+  s_f4ecdc97fbe5c3::t_218304cc6639c3 102-108,144-152,170-174
+  s_f4ecdc97fbe5c3::t_525b74de2850da 142,193,225
+test/unit/plugins/gpunetio/nixl_gpunetio_device_get_test.cu
+  s_f4ecdc97fbe5c3::t_525b74de2850da 197,219,321-326,331,333-338,380,390-392,397,421,424,1299,1301,1304,1306,1327,1376-1377,1387-1395,1397,1404-1406,1432,1438
+  s_f4ecdc97fbe5c3::t_218304cc6639c3 1381-1382
+src/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_e27d9da85a1ad9 59,70,79,81,93,99-100,102,119-121,128-131
+src/api/device/gpu/impl/gpunetio/device_gpunetio_types.h
+  s_f4ecdc97fbe5c3::t_293c366fa22913 20
+src/api/device/gpu/impl/device_dispatch.cuh
+  s_f4ecdc97fbe5c3::t_525b74de2850da 167,220
+test/unit/plugins/gpunetio/README.md
+  s_f4ecdc97fbe5c3::t_e27d9da85a1ad9 6,9,16-19,83-84,99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c372cdc9a825353b18d11865b0c6f5c138a98b5d",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
