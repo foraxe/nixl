@@ -167,7 +167,10 @@ put(const memViewElem &src,
     } else if (execution_mode == exec_mode_t::PROXY) {
         status = proxy::put<level>(backend_src, backend_dst, size, channel_id, flags, xfer_status);
     } else if (execution_mode == exec_mode_t::GPUNETIO_DIRECT) {
-        return NIXL_ERR_NOT_SUPPORTED;
+        if (src_view->execution_mode != execution_mode) {
+            return NIXL_ERR_INVALID_PARAM;
+        }
+        return gpunetio::put<level>(backend_src, backend_dst, size, channel_id, flags, xfer_status);
     } else {
         status = NIXL_ERR_INVALID_PARAM;
     }
@@ -223,7 +226,7 @@ atomicAdd(uint64_t value,
     } else if (execution_mode == exec_mode_t::PROXY) {
         status = proxy::atomicAdd<level>(value, backend_counter, channel_id, flags, xfer_status);
     } else if (execution_mode == exec_mode_t::GPUNETIO_DIRECT) {
-        return NIXL_ERR_NOT_SUPPORTED;
+        return gpunetio::atomicAdd<level>(value, backend_counter, channel_id, flags, xfer_status);
     } else {
         status = NIXL_ERR_INVALID_PARAM;
     }
@@ -240,6 +243,8 @@ getPtr(nixlMemViewH mvh, size_t index) {
         return ucx::getPtr(view->backend_memview, index);
     case exec_mode_t::PROXY:
         return proxy::getPtr(view->backend_memview, index);
+    case exec_mode_t::GPUNETIO_DIRECT:
+        return gpunetio::getPtr(view->backend_memview, index);
     default:
         return nullptr;
     }
