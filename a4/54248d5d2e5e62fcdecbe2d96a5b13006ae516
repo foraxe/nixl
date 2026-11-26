@@ -1,0 +1,31 @@
+.gitlab/build.sh
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 494-497
+benchmark/nixlbench/src/worker/nixl/nixl_worker.cpp
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 196-198,306-311,2233,2668-2673
+benchmark/nixlbench/src/kernels/nixlbench_device_launch.cuh
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 35-37,49,71-72
+benchmark/nixlbench/src/kernels/nixlbench_device_launch.cu
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 5-6,53-74,145-150,157-161,190-194,200-202,244-251,272-280
+benchmark/nixlbench/meson.build
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 272,355-356,370-385,392
+benchmark/nixlbench/src/utils/utils.cpp
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 363-366,501-502,504,508-513,518-528,543,555
+.gitlab/test_nixlbench.sh
+  s_f4ecdc97fbe5c3::t_568957a95d6d81 216-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a454248d5d2e5e62fcdecbe2d96a5b13006ae516",
+  "prompts": {},
+  "sessions": {
+    "s_f4ecdc97fbe5c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a0b5-a6d4-72d0-a235-18ac3c6a5232",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "foraxe <foraxe@users.noreply.github.com>"
+    }
+  }
+}
