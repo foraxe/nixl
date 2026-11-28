@@ -36,7 +36,7 @@ EXTRA_BUILD_ARGS=${3:-""}
 NIXL_BUILD_DIR=${NIXL_BUILD_DIR:-nixl_build}
 NIXLBENCH_BUILD_DIR=${NIXLBENCH_BUILD_DIR:-nixlbench_build}
 # UCX_VERSION is the version of UCX to build override default with env variable.
-UCX_VERSION=${UCX_VERSION:-v1.23.x}
+UCX_VERSION=${UCX_VERSION:-v1.24.x}
 # LIBFABRIC_VERSION is the version of libfabric to build override default with env variable.
 LIBFABRIC_VERSION=${LIBFABRIC_VERSION:-v2.7.0}
 # Abseil and gRPC versions for consistent toolchain build.
@@ -522,6 +522,18 @@ else
     # cp ${BUILD_DIR}/nixl.pc ${INSTALL_DIR}/lib/pkgconfig/nixl.pc
 
     cd benchmark/nixlbench
-    meson setup ${NIXLBENCH_BUILD_DIR} -Dnixl_path=${INSTALL_DIR} -Dprefix=${INSTALL_DIR}
+    if ! meson setup ${NIXLBENCH_BUILD_DIR} -Dnixl_path=${INSTALL_DIR} -Dprefix=${INSTALL_DIR}; then
+        cat "${NIXLBENCH_BUILD_DIR}/meson-logs/meson-log.txt"
+        exit 1
+    fi
+    # GPU CI expects the device GET path when DOCA is available. Keep failures visible:
+    # a failed optional compiler probe otherwise only disables the feature in the summary.
+    if $HAS_GPU && pkg-config --atleast-version=3.5 doca-gpunetio 2>/dev/null; then
+        if ! meson introspect --targets "${NIXLBENCH_BUILD_DIR}" | grep -F -- '-DNIXLBENCH_GPUNETIO_DEVICE_API' >/dev/null; then
+            cat "${NIXLBENCH_BUILD_DIR}/meson-logs/meson-log.txt"
+            echo "GPUNETIO Device API compiler probe failed; see the compiler output above" >&2
+            exit 1
+        fi
+    fi
     ninja -j"$NPROC" -C ${NIXLBENCH_BUILD_DIR} && ninja -j"$NPROC" -C ${NIXLBENCH_BUILD_DIR} install
 fi

@@ -44,6 +44,17 @@ globalTimerNs() {
     return value;
 }
 
+// Poll the status of an accepted GET; no extra request or channel-wide flush is posted.
+__device__ nixl_status_t
+waitGet(nixl::gpu::xferStatusH &status) {
+    nixl_status_t rc;
+    const auto deadline = globalTimerNs() + 5000000000ull;
+    do {
+        rc = nixl::gpu::getXferStatus(status);
+    } while (rc == NIXL_IN_PROG && globalTimerNs() < deadline);
+    return rc;
+}
+
 __global__ void
 inspectLane(nixlMemViewH handle, uint64_t *generation, bool poison) {
     using namespace nixl::gpu::impl::gpunetio;
@@ -207,16 +218,8 @@ standardGets(nixlMemViewH local, nixlMemViewH remote, unsigned channel, int *res
         *result = 40;
         return;
     }
-    auto poll = [&](xferStatusH &s) {
-        nixl_status_t rc;
-        const auto deadline = globalTimerNs() + 5000000000ull;
-        do {
-            rc = getXferStatus(s);
-        } while (rc == NIXL_IN_PROG && globalTimerNs() < deadline);
-        return rc;
-    };
-    if (poll(c) != NIXL_SUCCESS || poll(b) != NIXL_SUCCESS || poll(a) != NIXL_SUCCESS ||
-        flush(remote, channel) != NIXL_SUCCESS ||
+    if (waitGet(c) != NIXL_SUCCESS || waitGet(b) != NIXL_SUCCESS ||
+        waitGet(a) != NIXL_SUCCESS ||
         get({local, 0, 4096}, r, 64, channel, 2, nullptr) != NIXL_ERR_INVALID_PARAM) {
         *result = 41;
         return;
@@ -290,13 +293,14 @@ collectiveStandardGet(nixlMemViewH local,
     }
 }
 
-// Neither deferred GET has a status handle: flush is the only completion path.
+// The last real GET supplies the completion boundary for a deferred statusless prefix.
 __global__ void
-nullDeferredGet(nixlMemViewH local, nixlMemViewH remote, const uint8_t *destination, int *result) {
+statuslessPrefixGet(nixlMemViewH local, nixlMemViewH remote, const uint8_t *destination, int *result) {
     using namespace nixl::gpu;
+    xferStatusH last{};
     if (get({local, 0, 4096}, {remote, 0, 17}, 64, 0, flags::defer) != NIXL_IN_PROG ||
-        get({local, 0, 4160}, {remote, 0, 81}, 64, 0, flags::defer) != NIXL_IN_PROG ||
-        flush(remote, 0) != NIXL_SUCCESS) {
+        get({local, 0, 4160}, {remote, 0, 81}, 64, 0, 0, &last) != NIXL_IN_PROG ||
+        waitGet(last) != NIXL_SUCCESS) {
         *result = 53;
         return;
     }
@@ -323,14 +327,20 @@ scalarWrap(nixlMemViewH local,
         *result = 55;
         return;
     }
+    xferStatusH last{};
     for (size_t i = 0; i < count; ++i) {
-        if (get({local, 0, kWrapDst + i}, {remote, 0, 17 + i}, 1, 0, flags::defer) !=
-            NIXL_IN_PROG) {
+        const bool is_last = i + 1 == count;
+        if (get({local, 0, kWrapDst + i},
+                {remote, 0, 17 + i},
+                1,
+                0,
+                is_last ? 0 : flags::defer,
+                is_last ? &last : nullptr) != NIXL_IN_PROG) {
             *result = 55;
             return;
         }
     }
-    if (flush(remote, 0) != NIXL_SUCCESS) {
+    if (waitGet(last) != NIXL_SUCCESS) {
         *result = 56;
         return;
     }
@@ -356,9 +366,10 @@ channelIndependence(nixlMemViewH local0,
         *result = 57;
         return;
     }
+    xferStatusH last{};
     if (get({local0, 0, 4096}, {remote0, 0, 17}, 64, held_channel) != NIXL_ERR_NOT_ALLOWED ||
-        get({local0, 0, 4096}, {remote0, 0, 17}, 64, 0) != NIXL_IN_PROG ||
-        flush(remote0, 0) != NIXL_SUCCESS) {
+        get({local0, 0, 4096}, {remote0, 0, 17}, 64, 0, 0, &last) != NIXL_IN_PROG ||
+        waitGet(last) != NIXL_SUCCESS) {
         session.fail();
         *result = 58;
         return;
@@ -388,7 +399,7 @@ standardInvalid(nixlMemViewH local, nixlMemViewH remote, unsigned qps, int *resu
         return;
     }
     if (get({local, 0, 4096}, {remote, 0, 17}, 64, qps) != NIXL_ERR_INVALID_PARAM ||
-        flush(remote, qps) != NIXL_ERR_INVALID_PARAM ||
+        flush(remote, 0) != NIXL_ERR_NOT_SUPPORTED ||
         get<level_t::GRID>({local, 0, 4096}, {remote, 0, 17}, 64) != NIXL_ERR_NOT_SUPPORTED ||
         put({local, 0, 4096}, {remote, 0, 4096}, 64) != NIXL_ERR_NOT_SUPPORTED ||
         atomicAdd(1, {remote, 0, 5000}) != NIXL_ERR_NOT_SUPPORTED ||
@@ -434,7 +445,7 @@ largeTransfer(nixlMemViewH local, nixlMemViewH remote, size_t bytes, int *result
     do {
         rc = getXferStatus(status);
     } while (rc == NIXL_IN_PROG && globalTimerNs() < deadline);
-    if (rc != NIXL_SUCCESS || flush(remote, 0) != NIXL_SUCCESS) {
+    if (rc != NIXL_SUCCESS) {
         *result = 66;
     }
 }
@@ -1343,9 +1354,9 @@ main(int argc, char **argv) {
         check(cudaGetLastError(), "launch block standard GET");
         checkStandardResult();
 
-        check(cudaMemset(destination + 4096, 0xa5, 128), "poison null-status destinations");
+        check(cudaMemset(destination + 4096, 0xa5, 128), "poison statusless-prefix destinations");
         check(cudaMemset(device_result, 0, sizeof(int)), "reset null-status result");
-        nullDeferredGet<<<1, 1>>>(locals[0], remotes[0], destination, device_result);
+        statuslessPrefixGet<<<1, 1>>>(locals[0], remotes[0], destination, device_result);
         check(cudaGetLastError(), "launch null-status deferred GETs");
         checkStandardResult();
         if (qps > 1) {
