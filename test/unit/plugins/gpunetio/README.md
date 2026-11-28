@@ -14,12 +14,10 @@ Set `NIXL_GPUNETIO_TEST_QPS=4` or32 to exercise the owned pool in the hardware
 device API test below. It checks distinct lane/QP identities, batch mixed-view
 rejection, standard per-call channel selection, generation preservation on
 re-preparation, copied-status safety, fixed-mode submissions and immediate GPU
-consumption. Standard GET/status checks include a nullable-status prefix,
-defer, tracked-last-GET completion, reverse polling, queue wrap, same-channel THREAD/WARP/BLOCK callers,
-channel isolation and Graph replay. PUT, atomicAdd and flush are checked only for
-`NIXL_ERR_NOT_SUPPORTED`. The all-statusless sequence completed by flush is preserved in the separate
-flush follow-up; this GET-only test completes the same real GET sequence by
-tracking and polling its last request. The default remains
+consumption. Standard GET/status/GET-flush checks include nullable status,
+defer, reverse polling, queue wrap, same-channel THREAD/WARP/BLOCK callers,
+channel isolation and Graph replay. PUT and atomicAdd are checked only for
+`NIXL_ERR_NOT_SUPPORTED`. The default remains
 the one-QP test. GRID is unsupported; RDMA getPtr returns nullptr.
 
 The following are disposable-process fault modes; failed resources stay alive
