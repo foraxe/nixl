@@ -218,8 +218,7 @@ standardGets(nixlMemViewH local, nixlMemViewH remote, unsigned channel, int *res
         *result = 40;
         return;
     }
-    if (waitGet(c) != NIXL_SUCCESS || waitGet(b) != NIXL_SUCCESS ||
-        waitGet(a) != NIXL_SUCCESS ||
+    if (waitGet(c) != NIXL_SUCCESS || waitGet(b) != NIXL_SUCCESS || waitGet(a) != NIXL_SUCCESS ||
         get({local, 0, 4096}, r, 64, channel, 2, nullptr) != NIXL_ERR_INVALID_PARAM) {
         *result = 41;
         return;
@@ -295,7 +294,10 @@ collectiveStandardGet(nixlMemViewH local,
 
 // The last real GET supplies the completion boundary for a deferred statusless prefix.
 __global__ void
-statuslessPrefixGet(nixlMemViewH local, nixlMemViewH remote, const uint8_t *destination, int *result) {
+statuslessPrefixGet(nixlMemViewH local,
+                    nixlMemViewH remote,
+                    const uint8_t *destination,
+                    int *result) {
     using namespace nixl::gpu;
     xferStatusH last{};
     if (get({local, 0, 4096}, {remote, 0, 17}, 64, 0, flags::defer) != NIXL_IN_PROG ||
